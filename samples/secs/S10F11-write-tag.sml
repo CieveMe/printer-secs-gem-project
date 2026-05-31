@@ -1,0 +1,6 @@
+S10F11 W
+<L
+  <A "SHELF001">
+  <A "LOC001">
+  <A "EFS08IZS">
+>.

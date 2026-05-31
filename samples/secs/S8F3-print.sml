@@ -1,0 +1,7 @@
+S8F3 W
+<L
+  <A "SHELF001">
+  <A "PRINTER001">
+  <A "EFS08IZS">
+  <U1 1>
+>.

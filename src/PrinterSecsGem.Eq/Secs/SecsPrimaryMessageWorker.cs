@@ -21,13 +21,17 @@ public sealed class SecsPrimaryMessageWorker : BackgroundService
         _secsGem = secsGem;
         _dispatcher = dispatcher;
         _logger = logger;
+
+        _secsConnection.ConnectionChanged += delegate
+        {
+            _logger.LogInformation("HSMS connection state: {State}", _secsConnection.State);
+        };
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Starting SECS/GEM EQ worker");
 
-        _secsConnection.LinkTestEnabled = true;
         _secsConnection.Start(stoppingToken);
 
         await foreach (var received in _secsGem.GetPrimaryMessageAsync(stoppingToken))
@@ -45,7 +49,7 @@ public sealed class SecsPrimaryMessageWorker : BackgroundService
                     continue;
                 }
 
-                await received.TryReplyAsync(secondaryMessage);
+                await received.TryReplyAsync(secondaryMessage, stoppingToken);
             }
             catch (Exception ex)
             {

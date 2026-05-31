@@ -10,7 +10,10 @@ Lightweight EQ-side forwarding service.
   - `S1F3 -> S1F4`
   - `S5F11 -> S5F12`
   - `S8F3 -> S8F4`
-  - `S10F11 -> S10F12`
+- `S10F11 -> S10F12`
+- Tag read event message factories:
+  - `S6F11`
+  - `S6F21`
 - ZPL label generation for large text + Code128 barcode + readable text.
 - Replaceable printer and serial-hardware interfaces.
 
@@ -46,3 +49,7 @@ services.AddSingleton<IPrinterGateway, ZebraUsbPrinterGateway>();
 ```
 
 The file printer currently writes generated ZPL to `output/zpl` for quick validation.
+
+## Local validation
+
+See `docs/本地验证指南.md`.
