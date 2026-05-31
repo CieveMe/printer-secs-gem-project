@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PrinterSecsGem.Eq", "src\PrinterSecsGem.Eq\PrinterSecsGem.Eq.csproj", "{CA9F18A2-1B5A-46F0-A480-20B95F2A4616}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CA9F18A2-1B5A-46F0-A480-20B95F2A4616}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CA9F18A2-1B5A-46F0-A480-20B95F2A4616}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CA9F18A2-1B5A-46F0-A480-20B95F2A4616}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CA9F18A2-1B5A-46F0-A480-20B95F2A4616}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7EAF08D1-A203-44C8-95C5-AF26A6CB1D4A}
+	EndGlobalSection
+EndGlobal

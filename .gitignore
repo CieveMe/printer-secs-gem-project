@@ -5,6 +5,7 @@ packages/
 publish/
 Debug/
 Release/
+output/
 *.user
 *.suo
 *.cache

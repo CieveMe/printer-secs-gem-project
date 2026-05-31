@@ -24,11 +24,21 @@
 ## 仓库结构
 
 ```text
+PrinterSecsGem.sln  Visual Studio 解决方案
 docs/          项目附件、协议摘要、项目资料
 notes/         对接问题、调研记录、沟通结论
-src/           后续自研源码
+src/           自研源码
 third_party/   第三方 SDK 使用说明，不直接提交完整 SDK 包
 ```
+
+## 当前代码骨架
+
+`src/PrinterSecsGem.Eq` 已提供第一版 EQ 转发程序骨架：
+
+- `secs4net` EQ Active 连接 Host。
+- 处理 `S1F1/S1F3/S5F11/S8F3/S10F11`。
+- 打印接口先生成 ZPL 文件，后续可替换为 Zebra USB 实现。
+- 串口硬件接口先用 mock，后续可替换为实际 C# 串口实现。
 
 ## 不入库内容
 
