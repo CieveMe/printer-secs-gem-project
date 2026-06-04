@@ -1,0 +1,183 @@
+<SECSMessage>
+  <S1F1>
+    <Header>
+      <MessageName>S1F1</MessageName>
+      <Description>Are You There Request</Description>
+      <Stream>1</Stream>
+      <Function>1</Function>
+      <Direction>H-&gt;E</Direction>
+      <Wait>True</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem />
+  </S1F1>
+  <S1F2>
+    <Header>
+      <MessageName>S1F2</MessageName>
+      <Description>Are You There Reply</Description>
+      <Stream>1</Stream>
+      <Function>2</Function>
+      <Direction>H&lt;-E</Direction>
+      <Wait>False</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="0" Fixed="True" ItemName="" />
+    </DataItem>
+  </S1F2>
+  <S1F3>
+    <Header>
+      <MessageName>S1F3</MessageName>
+      <Description>Equipment Status Request</Description>
+      <Stream>1</Stream>
+      <Function>3</Function>
+      <Direction>H-&gt;E</Direction>
+      <Wait>True</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem />
+  </S1F3>
+  <S1F4>
+    <Header>
+      <MessageName>S1F4</MessageName>
+      <Description>Equipment Status Reply</Description>
+      <Stream>1</Stream>
+      <Function>4</Function>
+      <Direction>H&lt;-E</Direction>
+      <Wait>False</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="2" Fixed="True" ItemName="">
+        <A Count="6" Fixed="True" ItemName="Status">ONLINE</A>
+        <U1 Count="1" Fixed="True" ItemName="ResultCode">0</U1>
+      </L>
+    </DataItem>
+  </S1F4>
+  <PrintCommand>
+    <Header>
+      <MessageName>PrintCommand</MessageName>
+      <Description>S8F3 Print Command</Description>
+      <Stream>8</Stream>
+      <Function>3</Function>
+      <Direction>H-&gt;E</Direction>
+      <Wait>True</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="4" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
+        <A Count="10" Fixed="True" ItemName="PrinterId">PRINTER001</A>
+        <A Count="8" Fixed="False" ItemName="Content">EFS08IZS</A>
+        <U1 Count="1" Fixed="True" ItemName="Copies">1</U1>
+      </L>
+    </DataItem>
+  </PrintCommand>
+  <PrintResult>
+    <Header>
+      <MessageName>PrintResult</MessageName>
+      <Description>S8F4 Print Result</Description>
+      <Stream>8</Stream>
+      <Function>4</Function>
+      <Direction>H&lt;-E</Direction>
+      <Wait>False</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="4" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
+        <A Count="10" Fixed="True" ItemName="PrinterId">PRINTER001</A>
+        <U1 Count="1" Fixed="True" ItemName="ResultCode">0</U1>
+        <A Count="64" Fixed="False" ItemName="Description"></A>
+      </L>
+    </DataItem>
+  </PrintResult>
+  <ShelfStatusQuery>
+    <Header>
+      <MessageName>ShelfStatusQuery</MessageName>
+      <Description>S5F11 Shelf/RFID Status Query</Description>
+      <Stream>5</Stream>
+      <Function>11</Function>
+      <Direction>H-&gt;E</Direction>
+      <Wait>True</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="2" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
+        <A Count="3" Fixed="False" ItemName="LocationId">ALL</A>
+      </L>
+    </DataItem>
+  </ShelfStatusQuery>
+  <ShelfStatus>
+    <Header>
+      <MessageName>ShelfStatus</MessageName>
+      <Description>S5F12 Shelf/RFID Status Reply</Description>
+      <Stream>5</Stream>
+      <Function>12</Function>
+      <Direction>H&lt;-E</Direction>
+      <Wait>False</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="3" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
+        <L Count="1" Fixed="False" ItemName="Locations">
+          <L Count="3" Fixed="True" ItemName="Location">
+            <A Count="6" Fixed="True" ItemName="LocationId">LOC001</A>
+            <A Count="32" Fixed="False" ItemName="Tag">EFS08IAA</A>
+            <U1 Count="1" Fixed="True" ItemName="IsLoaded">1</U1>
+          </L>
+        </L>
+        <U1 Count="1" Fixed="True" ItemName="ResultCode">0</U1>
+      </L>
+    </DataItem>
+  </ShelfStatus>
+  <WriteTagCommand>
+    <Header>
+      <MessageName>WriteTagCommand</MessageName>
+      <Description>S10F11 Write Tag Command</Description>
+      <Stream>10</Stream>
+      <Function>11</Function>
+      <Direction>H-&gt;E</Direction>
+      <Wait>True</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="3" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
+        <A Count="6" Fixed="True" ItemName="LocationId">LOC001</A>
+        <A Count="8" Fixed="False" ItemName="Tag">EFS08IAA</A>
+      </L>
+    </DataItem>
+  </WriteTagCommand>
+  <WriteTagResult>
+    <Header>
+      <MessageName>WriteTagResult</MessageName>
+      <Description>S10F12 Write Tag Result</Description>
+      <Stream>10</Stream>
+      <Function>12</Function>
+      <Direction>H&lt;-E</Direction>
+      <Wait>False</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="4" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
+        <A Count="6" Fixed="True" ItemName="LocationId">LOC001</A>
+        <U1 Count="1" Fixed="True" ItemName="ResultCode">0</U1>
+        <A Count="64" Fixed="False" ItemName="Description"></A>
+      </L>
+    </DataItem>
+  </WriteTagResult>
+</SECSMessage>

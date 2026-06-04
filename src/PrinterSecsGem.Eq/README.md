@@ -13,7 +13,6 @@ Lightweight EQ-side forwarding service.
 - `S10F11 -> S10F12`
 - Tag read event message factories:
   - `S6F11`
-  - `S6F21`
 - ZPL label generation for large text + Code128 barcode + readable text.
 - Replaceable printer and serial-hardware interfaces.
 
@@ -34,9 +33,21 @@ Edit `appsettings.json`:
 
 `IsActive: true` means this EQ service actively connects to the Host.
 
+Label settings are also configured in `appsettings.json`. The current target label is 2.5 x 1.575 inches at 203dpi, about 508 x 320 dots:
+
+```json
+{
+  "LabelTemplate": {
+    "Dpi": 203,
+    "WidthDots": 508,
+    "HeightDots": 320
+  }
+}
+```
+
 ## Hardware integration point
 
-Replace `MockHardwareGateway` with the actual C# serial implementation:
+The serial hardware code will be provided as C# source, DLL, or a sample project. Replace `MockHardwareGateway` with that actual implementation:
 
 ```csharp
 services.AddSingleton<IHardwareGateway, ActualSerialHardwareGateway>();
@@ -53,3 +64,11 @@ The file printer currently writes generated ZPL to `output/zpl` for quick valida
 ## Local validation
 
 See `docs/本地验证指南.md`.
+
+Quick local mock validation:
+
+```powershell
+dotnet run --project .\src\PrinterSecsGem.Eq\PrinterSecsGem.Eq.csproj -- --validate-local
+```
+
+The program writes runtime logs to `logs/printer-secs-gem.log` by default.

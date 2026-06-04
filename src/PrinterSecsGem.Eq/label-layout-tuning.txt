@@ -1,0 +1,57 @@
+标签现场调参说明
+
+修改方式：
+1. 关闭其他会连接打印机的软件。
+2. 打开当前目录下的 App.config。
+3. 修改 LabelTemplate 开头的配置值，保存。
+4. 重新运行 zebra-send-usb.cmd。
+
+单位：
+所有位置和尺寸都是 dots。当前打印机是 203dpi，约等于 8 dots = 1mm。
+
+常用参数：
+LabelTemplate:LabelHomeX
+  整体左右移动。正数向右，负数向左。
+
+LabelTemplate:LabelHomeY
+  整体上下移动。正数向下，负数向上。
+
+LabelTemplate:TopTextX
+  上方大字左上角 X 坐标。当前配合 TopTextBlockWidth 居中，通常保持 0。
+
+LabelTemplate:TopTextY
+  上方大字上下位置。正数向下。
+
+LabelTemplate:TopTextHeight
+  上方大字高度。
+
+LabelTemplate:TopTextWidth
+  上方大字宽度。
+
+LabelTemplate:TopTextBlockWidth
+  上方大字居中区域宽度。一般保持 508。
+
+LabelTemplate:BarcodeX
+  条码左上角 X 坐标。正数向右。
+
+LabelTemplate:BarcodeY
+  条码上下位置。正数向下。
+
+LabelTemplate:BarcodeModuleWidth
+  条码线宽。数值越大，条码越宽。
+
+LabelTemplate:BarcodeHeight
+  条码高度。
+
+LabelTemplate:BarcodeHumanReadable
+  true 显示条码下方文字，false 不显示。
+
+LabelTemplate:ResetPrinterState
+  建议保持 true。每次打印前会清掉之前软件留下的偏移状态。
+
+调参建议：
+1. 先运行 zebra-send-calibration.cmd，看纸张边界和中心线。
+2. 如果所有内容整体偏，优先调 LabelHomeX / LabelHomeY。
+3. 如果只有大字偏，调 TopTextY / TopTextHeight / TopTextWidth。
+4. 如果只有条码偏，调 BarcodeX / BarcodeY / BarcodeHeight / BarcodeModuleWidth。
+5. 每次只改 1 到 2 个参数，改完保存 App.config，再运行 zebra-send-usb.cmd。

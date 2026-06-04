@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using PrinterSecsGem.Eq.Hardware;
 using PrinterSecsGem.Eq.Models;
 using PrinterSecsGem.Eq.Printing;
+using PrinterSecsGem.Eq.StatusUi;
 using Secs4Net;
 using static Secs4Net.Item;
 
@@ -11,23 +12,29 @@ public sealed class SecsMessageDispatcher
 {
     private readonly IPrinterGateway _printerGateway;
     private readonly IHardwareGateway _hardwareGateway;
+    private readonly StatusUiEventBus _statusEvents;
     private readonly ILogger<SecsMessageDispatcher> _logger;
 
     public SecsMessageDispatcher(
         IPrinterGateway printerGateway,
         IHardwareGateway hardwareGateway,
+        StatusUiEventBus statusEvents,
         ILogger<SecsMessageDispatcher> logger)
     {
         _printerGateway = printerGateway;
         _hardwareGateway = hardwareGateway;
+        _statusEvents = statusEvents;
         _logger = logger;
     }
 
     public async Task<SecsMessage?> DispatchAsync(SecsMessage primaryMessage, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Dispatch SECS message S{Stream}F{Function}", primaryMessage.S, primaryMessage.F);
+        _statusEvents.Publish(
+            StatusUiEventCategories.SecsLog,
+            $"Received Host message S{primaryMessage.S}F{primaryMessage.F}.");
 
-        return (primaryMessage.S, primaryMessage.F) switch
+        var reply = (primaryMessage.S, primaryMessage.F) switch
         {
             (1, 1) => CreateS1F2(),
             (1, 3) => CreateS1F4(),
@@ -36,6 +43,14 @@ public sealed class SecsMessageDispatcher
             (10, 11) => await HandleWriteTagAsync(primaryMessage, cancellationToken),
             _ => null
         };
+
+        _statusEvents.Publish(
+            StatusUiEventCategories.SecsLog,
+            reply is null
+                ? $"No handler for S{primaryMessage.S}F{primaryMessage.F}."
+                : $"Reply S{reply.S}F{reply.F} prepared for Host.");
+
+        return reply;
     }
 
     private async Task<SecsMessage> HandlePrintAsync(SecsMessage primaryMessage, CancellationToken cancellationToken)
@@ -46,8 +61,32 @@ public sealed class SecsMessageDispatcher
             SecsItemReader.ReadAscii(primaryMessage, 2),
             SecsItemReader.ReadU1(primaryMessage, 3, 1));
 
+        _logger.LogInformation(
+            "Handle print command: shelf={ShelfId}, printer={PrinterId}, content={Content}, copies={Copies}",
+            command.ShelfId,
+            command.PrinterId,
+            command.Content,
+            command.Copies);
+        _statusEvents.Publish(
+            StatusUiEventCategories.SecsLog,
+            $"S8F3 print command: content={command.Content}, copies={command.Copies}.");
+
         var result = await _printerGateway.PrintAsync(command, cancellationToken);
         var resultCode = result.Success ? (byte)0 : result.Code;
+
+        _logger.LogInformation(
+            "Print command result: success={Success}, code={Code}, description={Description}",
+            result.Success,
+            resultCode,
+            result.Description);
+        _statusEvents.Publish(
+            StatusUiEventCategories.SecsLog,
+            $"S8F3 print result: code={resultCode}, description={result.Description}.");
+        _statusEvents.Publish(
+            StatusUiEventCategories.LastPrint,
+            result.Success
+                ? $"Printed: {command.Content}"
+                : $"Print failed: code={resultCode}, {result.Description}");
 
         return new SecsMessage(8, 4)
         {
@@ -67,8 +106,31 @@ public sealed class SecsMessageDispatcher
             SecsItemReader.ReadAscii(primaryMessage, 1, "LOC001"),
             SecsItemReader.ReadAscii(primaryMessage, 2));
 
+        _logger.LogInformation(
+            "Handle write tag command: shelf={ShelfId}, location={LocationId}, tag={Tag}",
+            command.ShelfId,
+            command.LocationId,
+            command.Tag);
+        _statusEvents.Publish(
+            StatusUiEventCategories.SecsLog,
+            $"S10F11 write tag command: location={command.LocationId}, tag={command.Tag}.");
+
         var result = await _hardwareGateway.WriteTagAsync(command, cancellationToken);
         var resultCode = result.Success ? (byte)0 : result.Code;
+
+        _logger.LogInformation(
+            "Write tag result: success={Success}, code={Code}, description={Description}",
+            result.Success,
+            resultCode,
+            result.Description);
+        _statusEvents.Publish(
+            StatusUiEventCategories.SecsLog,
+            $"S10F11 write tag result: code={resultCode}, description={result.Description}.");
+        _statusEvents.Publish(
+            StatusUiEventCategories.RfidStatus,
+            result.Success
+                ? $"Written: {command.Tag}"
+                : $"Write failed: code={resultCode}, {result.Description}");
 
         return new SecsMessage(10, 12)
         {
@@ -87,8 +149,34 @@ public sealed class SecsMessageDispatcher
             SecsItemReader.ReadAscii(primaryMessage, 0, "SHELF001"),
             SecsItemReader.ReadAscii(primaryMessage, 1, "ALL"));
 
+        _logger.LogInformation(
+            "Handle shelf status query: shelf={ShelfId}, location={LocationId}",
+            query.ShelfId,
+            query.LocationId);
+        _statusEvents.Publish(
+            StatusUiEventCategories.SecsLog,
+            $"S5F11 shelf status query: shelf={query.ShelfId}, location={query.LocationId}.");
+
         var result = await _hardwareGateway.QueryShelfStatusAsync(query, cancellationToken);
         var resultCode = result.Success ? (byte)0 : result.Code;
+
+        _logger.LogInformation(
+            "Shelf status result: success={Success}, code={Code}, shelf={ShelfId}, locations={LocationCount}",
+            result.Success,
+            resultCode,
+            result.ShelfId,
+            result.Locations.Count);
+        var firstLocation = result.Locations.FirstOrDefault();
+        _statusEvents.Publish(
+            StatusUiEventCategories.SecsLog,
+            $"S5F11 shelf status result: code={resultCode}, tag={firstLocation?.Tag ?? string.Empty}, loaded={firstLocation?.IsLoaded}.");
+        _statusEvents.Publish(
+            StatusUiEventCategories.RfidStatus,
+            result.Success
+                ? string.IsNullOrWhiteSpace(firstLocation?.Tag)
+                    ? "No tag"
+                    : firstLocation.Tag
+                : $"Read failed: code={resultCode}");
 
         return new SecsMessage(5, 12)
         {

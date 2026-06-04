@@ -27,15 +27,21 @@ public sealed class FilePrinterGateway : IPrinterGateway
             return OperationResult.Fail(3, "print content is empty");
         }
 
-        var zpl = _template.Create(command.Content);
+        var copies = Math.Max(1, (int)command.Copies);
+        var zpl = _template.Create(command.Content, copies);
         Directory.CreateDirectory(_options.OutputDirectory);
 
         var fileName = $"{DateTime.Now:yyyyMMdd-HHmmss-fff}-{SanitizeFileName(command.Content)}.zpl";
         var filePath = Path.Combine(_options.OutputDirectory, fileName);
         await File.WriteAllTextAsync(filePath, zpl, cancellationToken);
 
-        _logger.LogInformation("Generated ZPL file for printer {PrinterId}: {FilePath}",
-            command.PrinterId, filePath);
+        _logger.LogInformation(
+            "Generated ZPL file: printer={PrinterId}, shelf={ShelfId}, content={Content}, copies={Copies}, file={FilePath}",
+            command.PrinterId,
+            command.ShelfId,
+            command.Content,
+            copies,
+            filePath);
 
         return OperationResult.Ok($"zpl generated: {filePath}");
     }

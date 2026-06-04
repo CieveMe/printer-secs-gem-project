@@ -1,0 +1,210 @@
+PrinterSecsGem.Eq 配置和现场操作说明
+====================================
+
+一、正式运行方式
+----------------
+
+双击：
+
+  PrinterSecsGem.Eq.exe
+
+程序会同时做三件事：
+
+1. 打开状态界面。
+2. 后台启动 SECS/GEM 连接，接收 Host 指令。
+3. 自动打开 App.config 里配置的 COM 口。
+
+正常状态：
+
+- SECS 显示 HSMS Selected。
+- COM 显示 COMxx open。
+- Host 发送 S10F11 / S5F11 / S8F3 时，界面日志会显示收到和回复。
+
+
+二、常用配置文件
+----------------
+
+主要修改：
+
+  App.config
+
+修改 App.config 后，需要关闭并重新打开 PrinterSecsGem.Eq.exe 才会生效。
+
+
+三、Host / SECS 配置
+--------------------
+
+配置项：
+
+  secs4net:IpAddress
+  secs4net:Port
+  secs4net:DeviceId
+  secs4net:IsActive
+
+当前默认：
+
+  IpAddress = 127.0.0.1
+  Port = 5000
+  DeviceId = 1
+  IsActive = true
+
+说明：
+
+- IsActive=true 表示本程序主动连接 Host。
+- 使用 SEComSimulator 测试时，模拟器一般配置为 Host、Passive/Listen、端口 5000、Device ID 1。
+
+
+四、RFID / 串口配置
+-------------------
+
+配置项：
+
+  ERackHardware:Enabled
+  ERackHardware:PortName
+  ERackHardware:BaudRate
+  ERackHardware:DeviceAddress
+  ERackHardware:InventoryMode
+  ERackHardware:KeepPortOpen
+  ERackHardware:WriteTagStartPage
+  ERackHardware:WriteTagWaitCount
+
+当前默认：
+
+  Enabled = true
+  PortName = COM11
+  BaudRate = 57600
+  DeviceAddress = 1
+  InventoryMode = 4
+  KeepPortOpen = true
+  WriteTagStartPage = 1
+  WriteTagWaitCount = 20
+
+说明：
+
+- PortName 要改成现场实际识别到的 COM 口。
+- WriteTagStartPage=1 是现场已验证可写入的配置。
+- KeepPortOpen=true 表示程序运行期间保持串口打开，减少反复开关串口。
+- 同一时间不要再打开其他会占用同一个 COM 口的软件。
+
+
+五、打印配置
+------------
+
+配置项：
+
+  Printer:RealPrintEnabled
+  Printer:Mode
+  Printer:ZebraCommandLineAssembly
+  Printer:ZebraConnectionType
+  Printer:ZebraPrinterAddress
+
+当前默认：
+
+  RealPrintEnabled = true
+  Mode = ZebraCommandLine
+  ZebraCommandLineAssembly = zebra-command-line/SdkApi.Desktop.CommandLine.dll
+  ZebraConnectionType = Usb
+  ZebraPrinterAddress = 空
+
+说明：
+
+- RealPrintEnabled=true 表示真实发送到 Zebra 打印机。
+- RealPrintEnabled=false 表示只生成 ZPL 和日志，不真实出纸，适合无纸或演示流程。
+- ZebraPrinterAddress 为空时，会自动发现 USB Zebra 打印机。
+- 如果现场有多台 Zebra 打印机，建议固定 ZebraPrinterAddress，避免自动发现选错。
+
+
+六、RFID 写入长度
+-----------------
+
+写 tag 的内容长度必须是：
+
+  8 / 16 / 24 / 32 个 ASCII 字符
+
+短写 8、16、24 字符时，只写对应长度，不会自动补空格清除后面的旧内容。
+
+因此读回 32 字节时，后面可能还会看到旧数据，这是当前约定行为。
+
+
+七、SECS 指令
+-------------
+
+当前支持：
+
+  S1F1  -> S1F2   连通性测试
+  S1F3  -> S1F4   设备状态
+  S8F3  -> S8F4   打印
+  S10F11 -> S10F12 写 RFID tag
+  S5F11 -> S5F12  读 RFID / 查询货架状态
+
+
+八、更新程序
+------------
+
+普通功能更新只需要替换：
+
+  PrinterSecsGem.Eq.exe
+
+不要覆盖 App.config，避免把现场配置改掉。
+不要删除 zebra-command-line 文件夹。
+
+如果覆盖 exe 时提示“文件被占用”，说明旧程序还在运行。
+
+优先操作：
+
+1. 关闭 Printer SECS GEM Status 窗口。
+2. 再覆盖 PrinterSecsGem.Eq.exe。
+
+如果仍然覆盖不了，双击：
+
+  stop-printer-secs-gem.cmd
+
+这个脚本会执行：
+
+  taskkill /F /IM PrinterSecsGem.Eq.exe
+
+执行后再覆盖新的 PrinterSecsGem.Eq.exe。
+
+注意：
+
+- taskkill 是强制结束程序，只建议在程序无法正常关闭或需要覆盖 exe 时使用。
+- 执行 taskkill 后，COM 口会被释放。
+- 覆盖 exe 后，重新双击 PrinterSecsGem.Eq.exe 启动程序。
+
+
+九、日志位置
+------------
+
+运行日志在：
+
+  logs/printer-secs-gem.log
+
+界面日志只显示当前运行期间的重要状态，完整排查请看 logs 目录。
+
+
+十、常见问题
+------------
+
+1. SECS 一直 Connecting
+
+检查 Host 或 SEComSimulator 是否已经启动监听。
+检查 IP、端口、Device ID 是否一致。
+
+2. COM 打不开
+
+检查 App.config 的 ERackHardware:PortName。
+检查设备管理器里实际 COM 口。
+检查是否有其他软件占用同一个 COM 口。
+
+3. RFID 写入失败
+
+检查 tag 长度是否为 8/16/24/32。
+检查 tag 是否放在读写器上。
+检查 WriteTagStartPage 是否为 1。
+
+4. 打印不出纸
+
+检查 Printer:RealPrintEnabled 是否为 true。
+检查 USB 打印机是否在线。
+检查 zebra-command-line 文件夹是否存在。
+检查标签纸和打印机状态。
