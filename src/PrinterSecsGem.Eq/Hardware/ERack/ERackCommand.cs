@@ -2,6 +2,9 @@ namespace PrinterSecsGem.Eq.Hardware.ERack;
 
 internal static class ERackCommand
 {
+    public const byte GetSensorState = 0x05;
+    public const byte GetSensorIoState = 0x06;
+    public const byte GetSensorZiState = 0x07;
     public const byte WriteTagWithResponse = 0x09;
     public const byte InventoryNoResponse = 0x0A;
     public const byte ReadInventoryResult = 0x0B;

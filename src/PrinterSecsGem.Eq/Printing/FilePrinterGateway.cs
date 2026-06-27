@@ -24,7 +24,7 @@ public sealed class FilePrinterGateway : IPrinterGateway
     {
         if (string.IsNullOrWhiteSpace(command.Content))
         {
-            return OperationResult.Fail(3, "print content is empty");
+            return PrintProtocolResult.Fail(PrintProtocolResult.EmptyContent);
         }
 
         var copies = Math.Max(1, (int)command.Copies);
@@ -43,7 +43,7 @@ public sealed class FilePrinterGateway : IPrinterGateway
             copies,
             filePath);
 
-        return OperationResult.Ok($"zpl generated: {filePath}");
+        return PrintProtocolResult.Ok();
     }
 
     private static string SanitizeFileName(string value)

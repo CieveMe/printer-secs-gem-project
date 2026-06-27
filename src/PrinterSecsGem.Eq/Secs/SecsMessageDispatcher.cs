@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using PrinterSecsGem.Eq.ErackNetwork;
 using PrinterSecsGem.Eq.Hardware;
 using PrinterSecsGem.Eq.Models;
 using PrinterSecsGem.Eq.Printing;
@@ -12,17 +14,26 @@ public sealed class SecsMessageDispatcher
 {
     private readonly IPrinterGateway _printerGateway;
     private readonly IHardwareGateway _hardwareGateway;
+    private readonly RuntimeOptions _runtimeOptions;
+    private readonly IERackUnitRouter _unitRouter;
+    private readonly IERackEventSink _eventSink;
     private readonly StatusUiEventBus _statusEvents;
     private readonly ILogger<SecsMessageDispatcher> _logger;
 
     public SecsMessageDispatcher(
         IPrinterGateway printerGateway,
         IHardwareGateway hardwareGateway,
+        IOptions<RuntimeOptions> runtimeOptions,
+        IERackUnitRouter unitRouter,
+        IERackEventSink eventSink,
         StatusUiEventBus statusEvents,
         ILogger<SecsMessageDispatcher> logger)
     {
         _printerGateway = printerGateway;
         _hardwareGateway = hardwareGateway;
+        _runtimeOptions = runtimeOptions.Value;
+        _unitRouter = unitRouter;
+        _eventSink = eventSink;
         _statusEvents = statusEvents;
         _logger = logger;
     }
@@ -71,8 +82,11 @@ public sealed class SecsMessageDispatcher
             StatusUiEventCategories.SecsLog,
             $"S8F3 print command: content={command.Content}, copies={command.Copies}.");
 
-        var result = await _printerGateway.PrintAsync(command, cancellationToken);
+        var result = UseRemoteRouting
+            ? await _unitRouter.PrintAsync(command, cancellationToken)
+            : await _printerGateway.PrintAsync(command, cancellationToken);
         var resultCode = result.Success ? (byte)0 : result.Code;
+        var secsDescription = PrintProtocolResult.GetSecsDescription(resultCode);
 
         _logger.LogInformation(
             "Print command result: success={Success}, code={Code}, description={Description}",
@@ -85,8 +99,20 @@ public sealed class SecsMessageDispatcher
         _statusEvents.Publish(
             StatusUiEventCategories.LastPrint,
             result.Success
-                ? $"Printed: {command.Content}"
+                ? result.Description
                 : $"Print failed: code={resultCode}, {result.Description}");
+        if (!UseRemoteRouting)
+        {
+            await _eventSink.PublishPrintAsync(
+                new PrintEvent(
+                    command.ShelfId,
+                    command.PrinterId,
+                    command.Content,
+                    resultCode,
+                    secsDescription,
+                    DateTimeOffset.Now),
+                cancellationToken);
+        }
 
         return new SecsMessage(8, 4)
         {
@@ -95,7 +121,7 @@ public sealed class SecsMessageDispatcher
                 A(command.ShelfId),
                 A(command.PrinterId),
                 U1(resultCode),
-                A(result.Description))
+                A(secsDescription))
         };
     }
 
@@ -115,7 +141,9 @@ public sealed class SecsMessageDispatcher
             StatusUiEventCategories.SecsLog,
             $"S10F11 write tag command: location={command.LocationId}, tag={command.Tag}.");
 
-        var result = await _hardwareGateway.WriteTagAsync(command, cancellationToken);
+        var result = UseRemoteRouting
+            ? await _unitRouter.WriteTagAsync(command, cancellationToken)
+            : await _hardwareGateway.WriteTagAsync(command, cancellationToken);
         var resultCode = result.Success ? (byte)0 : result.Code;
 
         _logger.LogInformation(
@@ -131,6 +159,18 @@ public sealed class SecsMessageDispatcher
             result.Success
                 ? $"Written: {command.Tag}"
                 : $"Write failed: code={resultCode}, {result.Description}");
+        if (!UseRemoteRouting)
+        {
+            await _eventSink.PublishRfidWriteAsync(
+                new RfidWriteEvent(
+                    command.ShelfId,
+                    command.LocationId,
+                    command.Tag,
+                    resultCode,
+                    result.Description,
+                    DateTimeOffset.Now),
+                cancellationToken);
+        }
 
         return new SecsMessage(10, 12)
         {
@@ -147,17 +187,21 @@ public sealed class SecsMessageDispatcher
     {
         var query = new ShelfStatusQuery(
             SecsItemReader.ReadAscii(primaryMessage, 0, "SHELF001"),
-            SecsItemReader.ReadAscii(primaryMessage, 1, "ALL"));
+            SecsItemReader.ReadAscii(primaryMessage, 1, "ALL"),
+            SecsItemReader.ReadU1(primaryMessage, 2, 32));
 
         _logger.LogInformation(
-            "Handle shelf status query: shelf={ShelfId}, location={LocationId}",
+            "Handle shelf status query: shelf={ShelfId}, location={LocationId}, readLength={ReadLength}",
             query.ShelfId,
-            query.LocationId);
+            query.LocationId,
+            query.ReadLengthBytes);
         _statusEvents.Publish(
             StatusUiEventCategories.SecsLog,
-            $"S5F11 shelf status query: shelf={query.ShelfId}, location={query.LocationId}.");
+            $"S5F11 shelf status query: shelf={query.ShelfId}, location={query.LocationId}, readLength={query.ReadLengthBytes}.");
 
-        var result = await _hardwareGateway.QueryShelfStatusAsync(query, cancellationToken);
+        var result = UseRemoteRouting
+            ? await _unitRouter.QueryShelfStatusAsync(query, cancellationToken)
+            : await _hardwareGateway.QueryShelfStatusAsync(query, cancellationToken);
         var resultCode = result.Success ? (byte)0 : result.Code;
 
         _logger.LogInformation(
@@ -211,4 +255,6 @@ public sealed class SecsMessageDispatcher
                 U1(0))
         };
     }
+
+    private bool UseRemoteRouting => _runtimeOptions.IsServerEnabled;
 }

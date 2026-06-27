@@ -22,5 +22,9 @@ if not exist "%SDK%" (
   exit /b 1
 )
 
-dotnet "%SDK%" status "%~1" --driver --printer --portstatus --verbose
+echo [printer status]
+dotnet "%SDK%" status "%~1" --driver --printer --verbose
+echo.
+echo [port status]
+dotnet "%SDK%" status "%~1" --driver --portstatus --verbose
 pause

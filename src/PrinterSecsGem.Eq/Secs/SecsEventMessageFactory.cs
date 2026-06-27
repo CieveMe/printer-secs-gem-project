@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using PrinterSecsGem.Eq.Models;
+using PrinterSecsGem.Eq.Printing;
 using Secs4Net;
 using static Secs4Net.Item;
 
@@ -30,9 +31,58 @@ public sealed class SecsEventMessageFactory
                 U4((uint)tagReadEvent.Timestamp.ToUnixTimeSeconds())));
     }
 
+    public SecsMessage CreateShelfStateEvent(ShelfStateEvent shelfStateEvent)
+    {
+        return new SecsMessage(6, 21, replyExpected: _options.ActiveEventReplyExpected)
+        {
+            Name = "ShelfStateChanged",
+            SecsItem = L(
+                A(shelfStateEvent.ShelfId),
+                A(shelfStateEvent.LocationId),
+                A(shelfStateEvent.Tag),
+                U1(shelfStateEvent.IsLoaded ? (byte)1 : (byte)0),
+                U4((uint)shelfStateEvent.Timestamp.ToUnixTimeSeconds()))
+        };
+    }
+
+    public SecsMessage CreateRfidWriteEvent(RfidWriteEvent rfidWriteEvent)
+    {
+        return CreateS6F11(
+            "RfidWriteResultEvent",
+            _options.RfidWriteCeid,
+            _options.RfidWriteRptid,
+            L(
+                A(rfidWriteEvent.ShelfId),
+                A(rfidWriteEvent.LocationId),
+                A(rfidWriteEvent.Tag),
+                U1(rfidWriteEvent.ResultCode),
+                A(rfidWriteEvent.Description),
+                U4((uint)rfidWriteEvent.Timestamp.ToUnixTimeSeconds())));
+    }
+
+    public SecsMessage CreatePrintEvent(PrintEvent printEvent)
+    {
+        var secsDescription = PrintProtocolResult.GetSecsDescription(printEvent.ResultCode);
+        var ceid = printEvent.ResultCode == PrintProtocolResult.Success
+            ? _options.PrintCompletedCeid
+            : _options.PrintFailedCeid;
+
+        return CreateS6F11(
+            "PrintResultEvent",
+            ceid,
+            _options.PrintRptid,
+            L(
+                A(printEvent.ShelfId),
+                A(printEvent.PrinterId),
+                A(printEvent.Content),
+                U1(printEvent.ResultCode),
+                A(secsDescription),
+                U4((uint)printEvent.Timestamp.ToUnixTimeSeconds())));
+    }
+
     private SecsMessage CreateS6F11(string name, uint ceid, uint rptid, Item reportValues)
     {
-        return new SecsMessage(6, 11, replyExpected: true)
+        return new SecsMessage(6, 11, replyExpected: _options.ActiveEventReplyExpected)
         {
             Name = name,
             SecsItem = L(

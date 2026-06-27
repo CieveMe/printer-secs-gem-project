@@ -2,11 +2,25 @@ namespace PrinterSecsGem.Eq.Secs;
 
 public sealed class SecsEventOptions
 {
+    public bool ActiveReportsEnabled { get; set; } = true;
+
+    public bool ActiveEventReplyExpected { get; set; }
+
     public ushort InitialDataId { get; set; } = 1;
 
     public uint TagReadCeid { get; set; } = 1001;
 
     public uint TagReadRptid { get; set; } = 2001;
+
+    public uint RfidWriteCeid { get; set; } = 2002;
+
+    public uint RfidWriteRptid { get; set; } = 2002;
+
+    public uint PrintCompletedCeid { get; set; } = 2003;
+
+    public uint PrintFailedCeid { get; set; } = 2004;
+
+    public uint PrintRptid { get; set; } = 2003;
 
     public uint ShelfIdVid { get; set; } = 3001;
 

@@ -16,5 +16,9 @@ public sealed class PrinterOptions
 
     public string ZebraPrinterAddress { get; set; } = string.Empty;
 
+    public bool ZebraPreflightStatusEnabled { get; set; }
+
+    public int ZebraCommandTimeoutMilliseconds { get; set; } = 10000;
+
     public string DotnetExecutable { get; set; } = "dotnet";
 }

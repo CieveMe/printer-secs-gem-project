@@ -110,9 +110,10 @@
       <NoLogging>False</NoLogging>
     </Header>
     <DataItem>
-      <L Count="2" Fixed="True" ItemName="">
+      <L Count="3" Fixed="True" ItemName="">
         <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
         <A Count="3" Fixed="False" ItemName="LocationId">ALL</A>
+        <U1 Count="1" Fixed="True" ItemName="ReadLengthBytes">32</U1>
       </L>
     </DataItem>
   </ShelfStatusQuery>

@@ -1,0 +1,464 @@
+<SECSMessage>
+  <T01_S1F1_AreYouThere>
+    <Header>
+      <MessageName>T01_S1F1_AreYouThere</MessageName>
+      <Description>01 Host sends S1F1, expect S1F2</Description>
+      <Stream>1</Stream>
+      <Function>1</Function>
+      <Direction>H-&gt;E</Direction>
+      <Wait>True</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem />
+  </T01_S1F1_AreYouThere>
+  <R01_S1F2_AreYouThereReply>
+    <Header>
+      <MessageName>R01_S1F2_AreYouThereReply</MessageName>
+      <Description>01 Expected S1F2 reply</Description>
+      <Stream>1</Stream>
+      <Function>2</Function>
+      <Direction>H&lt;-E</Direction>
+      <Wait>False</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="0" Fixed="True" ItemName="" />
+    </DataItem>
+  </R01_S1F2_AreYouThereReply>
+  <T02_S1F3_EquipmentStatus>
+    <Header>
+      <MessageName>T02_S1F3_EquipmentStatus</MessageName>
+      <Description>02 Host sends S1F3, expect S1F4 ONLINE</Description>
+      <Stream>1</Stream>
+      <Function>3</Function>
+      <Direction>H-&gt;E</Direction>
+      <Wait>True</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem />
+  </T02_S1F3_EquipmentStatus>
+  <R02_S1F4_EquipmentStatusReply>
+    <Header>
+      <MessageName>R02_S1F4_EquipmentStatusReply</MessageName>
+      <Description>02 Expected S1F4 reply</Description>
+      <Stream>1</Stream>
+      <Function>4</Function>
+      <Direction>H&lt;-E</Direction>
+      <Wait>False</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="2" Fixed="True" ItemName="">
+        <A Count="6" Fixed="True" ItemName="Status">ONLINE</A>
+        <U1 Count="1" Fixed="True" ItemName="ResultCode">0</U1>
+      </L>
+    </DataItem>
+  </R02_S1F4_EquipmentStatusReply>
+  <T03_S5F11_Read_LOC001_DefaultTag>
+    <Header>
+      <MessageName>T03_S5F11_Read_LOC001_DefaultTag</MessageName>
+      <Description>03 Read SHELF001/LOC001 before write, expect S5F12 code 0</Description>
+      <Stream>5</Stream>
+      <Function>11</Function>
+      <Direction>H-&gt;E</Direction>
+      <Wait>True</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="3" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
+        <A Count="6" Fixed="True" ItemName="LocationId">LOC001</A>
+        <U1 Count="1" Fixed="True" ItemName="ReadLengthBytes">32</U1>
+      </L>
+    </DataItem>
+  </T03_S5F11_Read_LOC001_DefaultTag>
+  <T04_S10F11_Write_TEST123456>
+    <Header>
+      <MessageName>T04_S10F11_Write_TEST123456</MessageName>
+      <Description>04 Write TEST123456 to SHELF001/LOC001, expect S10F12 code 0 and S6F11</Description>
+      <Stream>10</Stream>
+      <Function>11</Function>
+      <Direction>H-&gt;E</Direction>
+      <Wait>True</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="3" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
+        <A Count="6" Fixed="True" ItemName="LocationId">LOC001</A>
+        <A Count="10" Fixed="False" ItemName="Tag">TEST123456</A>
+      </L>
+    </DataItem>
+  </T04_S10F11_Write_TEST123456>
+  <T05_S5F11_Read_LOC001_AfterWrite>
+    <Header>
+      <MessageName>T05_S5F11_Read_LOC001_AfterWrite</MessageName>
+      <Description>05 Read SHELF001/LOC001 again, expect TEST123456 from MockHardware</Description>
+      <Stream>5</Stream>
+      <Function>11</Function>
+      <Direction>H-&gt;E</Direction>
+      <Wait>True</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="3" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
+        <A Count="6" Fixed="True" ItemName="LocationId">LOC001</A>
+        <U1 Count="1" Fixed="True" ItemName="ReadLengthBytes">32</U1>
+      </L>
+    </DataItem>
+  </T05_S5F11_Read_LOC001_AfterWrite>
+  <T06_S5F11_Read_ALL_10Bytes>
+    <Header>
+      <MessageName>T06_S5F11_Read_ALL_10Bytes</MessageName>
+      <Description>06 Read SHELF001/ALL with ReadLengthBytes=10, useful for truncation check</Description>
+      <Stream>5</Stream>
+      <Function>11</Function>
+      <Direction>H-&gt;E</Direction>
+      <Wait>True</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="3" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
+        <A Count="3" Fixed="False" ItemName="LocationId">ALL</A>
+        <U1 Count="1" Fixed="True" ItemName="ReadLengthBytes">10</U1>
+      </L>
+    </DataItem>
+  </T06_S5F11_Read_ALL_10Bytes>
+  <T07_S8F3_Print_TEST123456>
+    <Header>
+      <MessageName>T07_S8F3_Print_TEST123456</MessageName>
+      <Description>07 Print TEST123456, expect S8F4 code 0 and S6F11; RealPrint=false writes output/zpl</Description>
+      <Stream>8</Stream>
+      <Function>3</Function>
+      <Direction>H-&gt;E</Direction>
+      <Wait>True</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="4" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
+        <A Count="10" Fixed="True" ItemName="PrinterId">PRINTER001</A>
+        <A Count="10" Fixed="False" ItemName="Content">TEST123456</A>
+        <U1 Count="1" Fixed="True" ItemName="Copies">1</U1>
+      </L>
+    </DataItem>
+  </T07_S8F3_Print_TEST123456>
+  <T08_S5F11_BadShelf_EXPECT_CODE6>
+    <Header>
+      <MessageName>T08_S5F11_BadShelf_EXPECT_CODE6</MessageName>
+      <Description>08 Negative test: unknown SHELF999, expect S5F12 code 6</Description>
+      <Stream>5</Stream>
+      <Function>11</Function>
+      <Direction>H-&gt;E</Direction>
+      <Wait>True</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="3" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF999</A>
+        <A Count="6" Fixed="True" ItemName="LocationId">LOC001</A>
+        <U1 Count="1" Fixed="True" ItemName="ReadLengthBytes">32</U1>
+      </L>
+    </DataItem>
+  </T08_S5F11_BadShelf_EXPECT_CODE6>
+  <T09_S10F11_BadShelf_EXPECT_CODE6>
+    <Header>
+      <MessageName>T09_S10F11_BadShelf_EXPECT_CODE6</MessageName>
+      <Description>09 Negative test: write unknown SHELF999, expect S10F12 code 6</Description>
+      <Stream>10</Stream>
+      <Function>11</Function>
+      <Direction>H-&gt;E</Direction>
+      <Wait>True</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="3" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF999</A>
+        <A Count="6" Fixed="True" ItemName="LocationId">LOC001</A>
+        <A Count="10" Fixed="False" ItemName="Tag">TEST123456</A>
+      </L>
+    </DataItem>
+  </T09_S10F11_BadShelf_EXPECT_CODE6>
+  <T10_S8F3_BadShelf_EXPECT_CODE6>
+    <Header>
+      <MessageName>T10_S8F3_BadShelf_EXPECT_CODE6</MessageName>
+      <Description>10 Negative test: print unknown SHELF999, expect S8F4 code 6</Description>
+      <Stream>8</Stream>
+      <Function>3</Function>
+      <Direction>H-&gt;E</Direction>
+      <Wait>True</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="4" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF999</A>
+        <A Count="10" Fixed="True" ItemName="PrinterId">PRINTER001</A>
+        <A Count="10" Fixed="False" ItemName="Content">TEST123456</A>
+        <U1 Count="1" Fixed="True" ItemName="Copies">1</U1>
+      </L>
+    </DataItem>
+  </T10_S8F3_BadShelf_EXPECT_CODE6>
+  <R03_S5F12_ShelfStatus_Success>
+    <Header>
+      <MessageName>R03_S5F12_ShelfStatus_Success</MessageName>
+      <Description>Expected S5F12 success shape</Description>
+      <Stream>5</Stream>
+      <Function>12</Function>
+      <Direction>H&lt;-E</Direction>
+      <Wait>False</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="3" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
+        <L Count="1" Fixed="False" ItemName="Locations">
+          <L Count="3" Fixed="True" ItemName="Location">
+            <A Count="6" Fixed="True" ItemName="LocationId">LOC001</A>
+            <A Count="32" Fixed="False" ItemName="Tag">TEST123456</A>
+            <U1 Count="1" Fixed="True" ItemName="IsLoaded">1</U1>
+          </L>
+        </L>
+        <U1 Count="1" Fixed="True" ItemName="ResultCode">0</U1>
+      </L>
+    </DataItem>
+  </R03_S5F12_ShelfStatus_Success>
+  <R04_S5F12_ShelfStatus_Code6>
+    <Header>
+      <MessageName>R04_S5F12_ShelfStatus_Code6</MessageName>
+      <Description>Expected S5F12 unknown shelf shape, code 6 and empty Locations</Description>
+      <Stream>5</Stream>
+      <Function>12</Function>
+      <Direction>H&lt;-E</Direction>
+      <Wait>False</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="3" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF999</A>
+        <L Count="0" Fixed="False" ItemName="Locations" />
+        <U1 Count="1" Fixed="True" ItemName="ResultCode">6</U1>
+      </L>
+    </DataItem>
+  </R04_S5F12_ShelfStatus_Code6>
+  <R05_S10F12_WriteTag_Success>
+    <Header>
+      <MessageName>R05_S10F12_WriteTag_Success</MessageName>
+      <Description>Expected S10F12 write success shape</Description>
+      <Stream>10</Stream>
+      <Function>12</Function>
+      <Direction>H&lt;-E</Direction>
+      <Wait>False</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="4" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
+        <A Count="6" Fixed="True" ItemName="LocationId">LOC001</A>
+        <U1 Count="1" Fixed="True" ItemName="ResultCode">0</U1>
+        <A Count="64" Fixed="False" ItemName="Description">tag written</A>
+      </L>
+    </DataItem>
+  </R05_S10F12_WriteTag_Success>
+  <R06_S10F12_WriteTag_Code6>
+    <Header>
+      <MessageName>R06_S10F12_WriteTag_Code6</MessageName>
+      <Description>Expected S10F12 unknown shelf shape</Description>
+      <Stream>10</Stream>
+      <Function>12</Function>
+      <Direction>H&lt;-E</Direction>
+      <Wait>False</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="4" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF999</A>
+        <A Count="6" Fixed="True" ItemName="LocationId">LOC001</A>
+        <U1 Count="1" Fixed="True" ItemName="ResultCode">6</U1>
+        <A Count="64" Fixed="False" ItemName="Description">ERACK unit is not online for shelf: SHELF999</A>
+      </L>
+    </DataItem>
+  </R06_S10F12_WriteTag_Code6>
+  <R07_S8F4_Print_Success>
+    <Header>
+      <MessageName>R07_S8F4_Print_Success</MessageName>
+      <Description>Expected S8F4 print success shape</Description>
+      <Stream>8</Stream>
+      <Function>4</Function>
+      <Direction>H&lt;-E</Direction>
+      <Wait>False</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="4" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
+        <A Count="10" Fixed="True" ItemName="PrinterId">PRINTER001</A>
+        <U1 Count="1" Fixed="True" ItemName="ResultCode">0</U1>
+        <A Count="64" Fixed="False" ItemName="Description">zpl generated</A>
+      </L>
+    </DataItem>
+  </R07_S8F4_Print_Success>
+  <R08_S8F4_Print_Code6>
+    <Header>
+      <MessageName>R08_S8F4_Print_Code6</MessageName>
+      <Description>Expected S8F4 unknown shelf shape</Description>
+      <Stream>8</Stream>
+      <Function>4</Function>
+      <Direction>H&lt;-E</Direction>
+      <Wait>False</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="4" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF999</A>
+        <A Count="10" Fixed="True" ItemName="PrinterId">PRINTER001</A>
+        <U1 Count="1" Fixed="True" ItemName="ResultCode">6</U1>
+        <A Count="64" Fixed="False" ItemName="Description">ERACK unit is not online for shelf: SHELF999</A>
+      </L>
+    </DataItem>
+  </R08_S8F4_Print_Code6>
+  <E01_S6F21_ShelfState_WithTag>
+    <Header>
+      <MessageName>E01_S6F21_ShelfState_WithTag</MessageName>
+      <Description>Active S6F21 example: loaded with RFID</Description>
+      <Stream>6</Stream>
+      <Function>21</Function>
+      <Direction>H&lt;-E</Direction>
+      <Wait>False</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="5" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
+        <A Count="6" Fixed="True" ItemName="LocationId">LOC001</A>
+        <A Count="14" Fixed="False" ItemName="RfidId">RFID1234567890</A>
+        <U1 Count="1" Fixed="True" ItemName="Status">1</U1>
+        <U4 Count="1" Fixed="True" ItemName="UnixSeconds">1780000000</U4>
+      </L>
+    </DataItem>
+  </E01_S6F21_ShelfState_WithTag>
+  <E02_S6F21_ShelfState_LoadedNoTag>
+    <Header>
+      <MessageName>E02_S6F21_ShelfState_LoadedNoTag</MessageName>
+      <Description>Active S6F21 example: loaded but RFID is empty</Description>
+      <Stream>6</Stream>
+      <Function>21</Function>
+      <Direction>H&lt;-E</Direction>
+      <Wait>False</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="5" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
+        <A Count="6" Fixed="True" ItemName="LocationId">LOC001</A>
+        <A Count="0" Fixed="False" ItemName="RfidId"></A>
+        <U1 Count="1" Fixed="True" ItemName="Status">1</U1>
+        <U4 Count="1" Fixed="True" ItemName="UnixSeconds">1780000005</U4>
+      </L>
+    </DataItem>
+  </E02_S6F21_ShelfState_LoadedNoTag>
+  <E03_S6F21_ShelfState_Unloaded>
+    <Header>
+      <MessageName>E03_S6F21_ShelfState_Unloaded</MessageName>
+      <Description>Active S6F21 example: unloaded</Description>
+      <Stream>6</Stream>
+      <Function>21</Function>
+      <Direction>H&lt;-E</Direction>
+      <Wait>False</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="5" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
+        <A Count="6" Fixed="True" ItemName="LocationId">LOC001</A>
+        <A Count="0" Fixed="False" ItemName="RfidId"></A>
+        <U1 Count="1" Fixed="True" ItemName="Status">0</U1>
+        <U4 Count="1" Fixed="True" ItemName="UnixSeconds">1780000010</U4>
+      </L>
+    </DataItem>
+  </E03_S6F21_ShelfState_Unloaded>
+  <E04_S6F11_RfidWriteResult>
+    <Header>
+      <MessageName>E04_S6F11_RfidWriteResult</MessageName>
+      <Description>Active S6F11 RFID write result event, CEID/RPTID 2002</Description>
+      <Stream>6</Stream>
+      <Function>11</Function>
+      <Direction>H&lt;-E</Direction>
+      <Wait>False</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="3" Fixed="True" ItemName="">
+        <U2 Count="1" Fixed="True" ItemName="DATAID">1</U2>
+        <U4 Count="1" Fixed="True" ItemName="CEID">2002</U4>
+        <L Count="1" Fixed="True" ItemName="Reports">
+          <L Count="2" Fixed="True" ItemName="Report">
+            <U4 Count="1" Fixed="True" ItemName="RPTID">2002</U4>
+            <L Count="6" Fixed="True" ItemName="Values">
+              <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
+              <A Count="6" Fixed="True" ItemName="LocationId">LOC001</A>
+              <A Count="10" Fixed="False" ItemName="RfidValue">TEST123456</A>
+              <U1 Count="1" Fixed="True" ItemName="ResultCode">0</U1>
+              <A Count="64" Fixed="False" ItemName="Description">tag written</A>
+              <U4 Count="1" Fixed="True" ItemName="UnixSeconds">1780000020</U4>
+            </L>
+          </L>
+        </L>
+      </L>
+    </DataItem>
+  </E04_S6F11_RfidWriteResult>
+  <E05_S6F11_PrintCompleted>
+    <Header>
+      <MessageName>E05_S6F11_PrintCompleted</MessageName>
+      <Description>Active S6F11 print completed event, CEID 2003 RPTID 2003</Description>
+      <Stream>6</Stream>
+      <Function>11</Function>
+      <Direction>H&lt;-E</Direction>
+      <Wait>False</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="3" Fixed="True" ItemName="">
+        <U2 Count="1" Fixed="True" ItemName="DATAID">2</U2>
+        <U4 Count="1" Fixed="True" ItemName="CEID">2003</U4>
+        <L Count="1" Fixed="True" ItemName="Reports">
+          <L Count="2" Fixed="True" ItemName="Report">
+            <U4 Count="1" Fixed="True" ItemName="RPTID">2003</U4>
+            <L Count="6" Fixed="True" ItemName="Values">
+              <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
+              <A Count="10" Fixed="True" ItemName="PrinterId">PRINTER001</A>
+              <A Count="10" Fixed="False" ItemName="Content">TEST123456</A>
+              <U1 Count="1" Fixed="True" ItemName="ResultCode">0</U1>
+              <A Count="64" Fixed="False" ItemName="Description">zpl generated</A>
+              <U4 Count="1" Fixed="True" ItemName="UnixSeconds">1780000030</U4>
+            </L>
+          </L>
+        </L>
+      </L>
+    </DataItem>
+  </E05_S6F11_PrintCompleted>
+</SECSMessage>

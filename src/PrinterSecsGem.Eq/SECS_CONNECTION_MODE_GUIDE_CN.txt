@@ -1,0 +1,56 @@
+SECS 连接模式切换说明
+
+一、默认模式：EQ_ACTIVE_SIM_PASSIVE
+- 程序作为 EQ 主动连接 Host/Simulator。
+- App.config:
+  secs4net:IsActive=true
+  secs4net:IpAddress=127.0.0.1
+  secs4net:Port=5000
+- SEComSimulator:
+  Connect Mode=Passive
+  Local Port=5000
+- 切换脚本：
+  set-secs-eq-active-sim-passive.cmd
+
+二、兼容模式：EQ_PASSIVE_SIM_ACTIVE
+- 程序作为 EQ 被动监听 5000，等待 Host/Simulator 主动连接。
+- App.config:
+  secs4net:IsActive=false
+  secs4net:IpAddress=0.0.0.0
+  secs4net:Port=5000
+- SEComSimulator:
+  Connect Mode=Active
+  Remote IP=127.0.0.1
+  Remote Port=5000
+- 切换脚本：
+  set-secs-eq-passive-sim-active.cmd
+
+三、Passive 模式正确启动顺序
+1. 关闭 PrinterSecsGem.Eq.exe。
+2. 关闭 SEComSimulator，避免它保留旧连接状态。
+3. 双击 set-secs-eq-passive-sim-active.cmd。
+4. 重新打开 PrinterSecsGem.Eq.exe。
+5. 确认 GUI 显示：
+   SECS Role = 被动监听 0.0.0.0:5000
+   SECS = HSMS Connecting
+6. 再打开 SEComSimulator，设置 Connect Mode=Active、Remote IP=127.0.0.1、Remote Port=5000。
+7. 点击 Save，关闭配置窗口，然后让模拟器重新连接；必要时直接关闭并重新打开 SEComSimulator。
+8. 连接成功后 GUI 应显示 HSMS Connected，随后变为 Selected。
+
+四、如果 Passive 模式仍然 Connecting
+- 确认只有一个 PrinterSecsGem.Eq.exe 进程；可先运行 stop-printer-secs-gem.cmd。
+- 确认没有另一个模拟器或旧程序占用 5000。
+- 在程序启动后执行：
+  netstat -ano | findstr :5000
+  正常应能看到 5000 处于 LISTENING 或已有 ESTABLISHED。
+- 如果模拟器和程序不在同一台电脑，Remote IP 不要填 127.0.0.1，要填运行 PrinterSecsGem.Eq.exe 那台电脑的 IP，并放行防火墙 5000。
+- 两端角色必须互补：不能双方都 Active，也不能双方都 Passive。
+- 修改 App.config 后必须重启 PrinterSecsGem.Eq.exe；模拟器修改 HSMS 配置后也要 Save 并重新发起连接。
+
+五、状态界面语言
+- App.config:
+  StatusUi:Language=zh-CN
+- 可选值：
+  zh-CN 或 zh：中文界面
+  en-US 或 en：英文界面
+- 修改后重启 PrinterSecsGem.Eq.exe 生效。

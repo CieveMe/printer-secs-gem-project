@@ -11,4 +11,4 @@ if errorlevel 1 (
 )
 echo.
 echo You can now replace PrinterSecsGem.Eq.exe if needed.
-pause
+ping -n 4 127.0.0.1 >nul
