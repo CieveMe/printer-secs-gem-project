@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -20,6 +21,8 @@ public sealed class ERackSensorDisplayWorker : BackgroundService
     private readonly StatusUiEventBus _statusEvents;
     private readonly ILogger<ERackSensorDisplayWorker> _logger;
     private readonly Dictionary<string, bool> _lastLoadedStates = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, PresenceSnapshot> _lastRfidPollingStates = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, int> _rfidPollingEmptyCounts = new(StringComparer.OrdinalIgnoreCase);
 
     public ERackSensorDisplayWorker(
         IOptions<RuntimeOptions> runtimeOptions,
@@ -64,25 +67,58 @@ public sealed class ERackSensorDisplayWorker : BackgroundService
             return;
         }
 
+        if (!_options.HasKnownPresenceMode)
+        {
+            _logger.LogWarning(
+                "Unsupported ERackSensorDisplay:PresenceMode={PresenceMode}; falling back to Sensor.",
+                _options.PresenceMode);
+        }
+
+        var useRfidPolling = _options.IsRfidPollingMode;
+        var presenceMode = _options.NormalizedPresenceMode;
         _logger.LogInformation(
-            "ERack sensor/display worker started: locations={LocationCount}, pollIntervalMs={PollIntervalMilliseconds}, sensorCommand=0x{SensorCommand:X2}, payloadIndex={SensorPayloadIndex}, checkLevel={CheckLevel}",
+            "ERack sensor/display worker started: locations={LocationCount}, presenceMode={PresenceMode}, pollIntervalMs={PollIntervalMilliseconds}, rfidPollingReadTimeoutMs={RfidPollingReadTimeoutMilliseconds}, emptyConfirmCount={EmptyConfirmCount}, sensorCommand=0x{SensorCommand:X2}, payloadIndex={SensorPayloadIndex}, checkLevel={CheckLevel}",
             _locations.Locations.Count,
+            presenceMode,
             NormalizePollInterval(),
+            NormalizeRfidPollingReadTimeout(),
+            NormalizeRfidPollingEmptyConfirmCount(),
             _options.SensorCommand,
             _options.SensorPayloadIndex,
             _options.CheckLevel);
-        _statusEvents.Publish(StatusUiEventCategories.DisplayStatus, "Display enabled: waiting for sensor state");
+        _statusEvents.Publish(
+            StatusUiEventCategories.DisplayStatus,
+            useRfidPolling
+                ? "Display enabled: RFID polling presence mode"
+                : "Display enabled: waiting for sensor state");
 
         try
         {
             while (!stoppingToken.IsCancellationRequested)
             {
+                var cycleStopwatch = Stopwatch.StartNew();
                 foreach (var location in _locations.Locations)
                 {
-                    await PollLocationAsync(location, stoppingToken);
+                    if (useRfidPolling)
+                    {
+                        await PollLocationByRfidAsync(location, stoppingToken);
+                    }
+                    else
+                    {
+                        await PollLocationAsync(location, stoppingToken);
+                    }
                 }
 
-                await Task.Delay(NormalizePollInterval(), stoppingToken);
+                var delayMilliseconds = NormalizePollInterval();
+                if (useRfidPolling)
+                {
+                    delayMilliseconds = Math.Max(0, delayMilliseconds - (int)cycleStopwatch.ElapsedMilliseconds);
+                }
+
+                if (delayMilliseconds > 0)
+                {
+                    await Task.Delay(delayMilliseconds, stoppingToken);
+                }
             }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -116,7 +152,7 @@ public sealed class ERackSensorDisplayWorker : BackgroundService
             return;
         }
 
-        var stateKey = $"{location.ShelfId}|{location.LocationId}";
+        var stateKey = BuildStateKey(location);
         if (!_options.UpdateDisplayOnEveryPoll &&
             _lastLoadedStates.TryGetValue(stateKey, out var lastLoaded) &&
             lastLoaded == sensor.IsLoaded)
@@ -132,6 +168,170 @@ public sealed class ERackSensorDisplayWorker : BackgroundService
         }
 
         await ClearDisplayAsync(location, cancellationToken);
+    }
+
+    private async Task PollLocationByRfidAsync(ERackLocation location, CancellationToken cancellationToken)
+    {
+        var status = await QueryShelfStatusForRfidPollingAsync(location, cancellationToken);
+        var stateKey = BuildStateKey(location);
+        var readFailed = false;
+        var failureDescription = string.Empty;
+        var tag = string.Empty;
+
+        if (status.Success)
+        {
+            tag = status.Locations.FirstOrDefault()?.Tag?.Trim() ?? string.Empty;
+            _statusEvents.Publish(
+                StatusUiEventCategories.RfidStatus,
+                string.IsNullOrWhiteSpace(tag)
+                    ? "RFID polling empty"
+                    : $"RFID polling loaded: {tag}");
+        }
+        else
+        {
+            if (_gateway.IsShutdownRequested || cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            readFailed = true;
+            failureDescription = NormalizeStatusDescription(status.Description);
+        }
+
+        if (string.IsNullOrWhiteSpace(tag))
+        {
+            await HandleRfidPollingEmptyCandidateAsync(
+                location,
+                stateKey,
+                readFailed,
+                failureDescription,
+                status.Code,
+                cancellationToken);
+            return;
+        }
+
+        _rfidPollingEmptyCounts[stateKey] = 0;
+        var current = new PresenceSnapshot(true, tag);
+        var shouldPublish = HasRfidPollingStateChanged(stateKey, current);
+        if (!shouldPublish && !_options.UpdateDisplayOnEveryPoll)
+        {
+            return;
+        }
+
+        var displayResult = await _gateway.SetDisplayTextAsync(
+            location,
+            current.Tag,
+            _options.DisplayWaitTimeMilliseconds,
+            _options.DisplayMinWaitCount,
+            _options.DisplayMaxBytes,
+            cancellationToken);
+
+        LogDisplayResult(location, current.Tag, displayResult, "RFID polling");
+
+        if (shouldPublish)
+        {
+            await PublishShelfStateEventAsync(location, current.Tag, current.IsLoaded, cancellationToken);
+            _lastRfidPollingStates[stateKey] = current;
+        }
+    }
+
+    private async Task<ShelfStatusResult> QueryShelfStatusForRfidPollingAsync(
+        ERackLocation location,
+        CancellationToken cancellationToken)
+    {
+        var timeoutMilliseconds = NormalizeRfidPollingReadTimeout();
+        using var readTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        readTimeout.CancelAfter(timeoutMilliseconds);
+
+        try
+        {
+            return await _gateway.QueryShelfStatusAsync(
+                new ShelfStatusQuery(location.ShelfId, location.LocationId, _options.ReadLengthBytes),
+                readTimeout.Token);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && readTimeout.IsCancellationRequested)
+        {
+            return ShelfStatusResult.Fail(
+                location.ShelfId,
+                8,
+                $"RFID polling read timed out after {timeoutMilliseconds} ms");
+        }
+    }
+
+    private async Task HandleRfidPollingEmptyCandidateAsync(
+        ERackLocation location,
+        string stateKey,
+        bool readFailed,
+        string failureDescription,
+        byte failureCode,
+        CancellationToken cancellationToken)
+    {
+        var emptyConfirmCount = NormalizeRfidPollingEmptyConfirmCount();
+        var emptyCount = IncrementRfidPollingEmptyCount(stateKey);
+        var reason = readFailed ? failureDescription : "empty tag";
+        var emptyConfirmed = emptyCount >= emptyConfirmCount;
+
+        if (!emptyConfirmed)
+        {
+            if (ShouldLogRfidPollingEmptyPending(emptyCount, emptyConfirmCount))
+            {
+                _logger.LogInformation(
+                    "ERack RFID polling empty candidate: shelf={ShelfId}, location={LocationId}, emptyCount={EmptyCount}/{EmptyConfirmCount}, reason={Reason}",
+                    location.ShelfId,
+                    location.LocationId,
+                    emptyCount,
+                    emptyConfirmCount,
+                    reason);
+            }
+
+            _statusEvents.Publish(
+                StatusUiEventCategories.RfidStatus,
+                $"RFID polling empty pending: {emptyCount}/{emptyConfirmCount}");
+            return;
+        }
+
+        var current = new PresenceSnapshot(false, string.Empty);
+        var shouldPublish = HasRfidPollingStateChanged(stateKey, current);
+        if (!shouldPublish && !_options.UpdateDisplayOnEveryPoll)
+        {
+            return;
+        }
+
+        _logger.Log(
+            readFailed ? LogLevel.Warning : LogLevel.Information,
+            "ERack RFID polling empty confirmed: shelf={ShelfId}, location={LocationId}, emptyCount={EmptyCount}/{EmptyConfirmCount}, code={Code}, reason={Reason}",
+            location.ShelfId,
+            location.LocationId,
+            emptyCount,
+            emptyConfirmCount,
+            failureCode,
+            reason);
+        _statusEvents.Publish(
+            StatusUiEventCategories.RfidStatus,
+            readFailed
+                ? $"RFID polling failure confirmed empty: {reason}"
+                : "RFID polling empty confirmed");
+
+        var displayResult = await _gateway.ClearDisplayAsync(
+            location,
+            _options.DisplayWaitTimeMilliseconds,
+            _options.DisplayMinWaitCount,
+            cancellationToken);
+
+        LogDisplayResult(location, string.Empty, displayResult, "RFID polling");
+
+        if (readFailed && displayResult.Success)
+        {
+            _statusEvents.Publish(
+                StatusUiEventCategories.DisplayStatus,
+                $"Display cleared after RFID polling failure confirmation: {reason}");
+        }
+
+        if (shouldPublish)
+        {
+            await PublishShelfStateEventAsync(location, current.Tag, current.IsLoaded, cancellationToken);
+            _lastRfidPollingStates[stateKey] = current;
+        }
     }
 
     private async Task ReadTagAndDisplayAsync(ERackLocation location, CancellationToken cancellationToken)
@@ -171,7 +371,7 @@ public sealed class ERackSensorDisplayWorker : BackgroundService
             StatusUiEventCategories.RfidStatus,
             string.IsNullOrWhiteSpace(tag) ? "Sensor loaded, no tag" : tag);
 
-        LogDisplayResult(location, tag, displayResult);
+        LogDisplayResult(location, tag, displayResult, "sensor state");
         await PublishShelfStateEventAsync(location, tag, isLoaded: true, cancellationToken);
     }
 
@@ -184,7 +384,7 @@ public sealed class ERackSensorDisplayWorker : BackgroundService
             cancellationToken);
 
         _statusEvents.Publish(StatusUiEventCategories.RfidStatus, "Sensor empty");
-        LogDisplayResult(location, string.Empty, displayResult);
+        LogDisplayResult(location, string.Empty, displayResult, "sensor state");
         await PublishShelfStateEventAsync(location, string.Empty, isLoaded: false, cancellationToken);
     }
 
@@ -206,7 +406,7 @@ public sealed class ERackSensorDisplayWorker : BackgroundService
         _statusEvents.Publish(
             StatusUiEventCategories.RfidStatus,
             $"Sensor loaded, no RFID: {description}");
-        LogDisplayResult(location, displayText, displayResult);
+        LogDisplayResult(location, displayText, displayResult, "sensor state");
         await PublishShelfStateEventAsync(location, string.Empty, isLoaded: true, cancellationToken);
     }
 
@@ -232,7 +432,32 @@ public sealed class ERackSensorDisplayWorker : BackgroundService
             cancellationToken);
     }
 
-    private void LogDisplayResult(ERackLocation location, string displayText, OperationResult result)
+    private static string BuildStateKey(ERackLocation location)
+    {
+        return $"{location.ShelfId}|{location.LocationId}";
+    }
+
+    private bool HasRfidPollingStateChanged(string stateKey, PresenceSnapshot current)
+    {
+        if (!_lastRfidPollingStates.TryGetValue(stateKey, out var last))
+        {
+            return true;
+        }
+
+        if (last.IsLoaded != current.IsLoaded)
+        {
+            return true;
+        }
+
+        return current.IsLoaded && !string.Equals(last.Tag, current.Tag, StringComparison.Ordinal);
+    }
+
+    private static string NormalizeStatusDescription(string description)
+    {
+        return string.IsNullOrWhiteSpace(description) ? "no description" : description.Trim();
+    }
+
+    private void LogDisplayResult(ERackLocation location, string displayText, OperationResult result, string source)
     {
         if (result.Success)
         {
@@ -240,7 +465,8 @@ public sealed class ERackSensorDisplayWorker : BackgroundService
                 StatusUiEventCategories.DisplayStatus,
                 string.IsNullOrWhiteSpace(displayText) ? "Display cleared" : $"Display text sent: {displayText}");
             _logger.LogInformation(
-                "ERack display updated from sensor state: shelf={ShelfId}, location={LocationId}, text={DisplayText}",
+                "ERack display updated: source={Source}, shelf={ShelfId}, location={LocationId}, text={DisplayText}",
+                source,
                 location.ShelfId,
                 location.LocationId,
                 displayText);
@@ -251,7 +477,8 @@ public sealed class ERackSensorDisplayWorker : BackgroundService
             StatusUiEventCategories.DisplayStatus,
             $"Display failed: {result.Description}");
         _logger.LogWarning(
-            "ERack display update from sensor state failed: shelf={ShelfId}, location={LocationId}, code={Code}, description={Description}",
+            "ERack display update failed: source={Source}, shelf={ShelfId}, location={LocationId}, code={Code}, description={Description}",
+            source,
             location.ShelfId,
             location.LocationId,
             result.Code,
@@ -262,4 +489,33 @@ public sealed class ERackSensorDisplayWorker : BackgroundService
     {
         return Math.Max(100, _options.PollIntervalMilliseconds);
     }
+
+    private int NormalizeRfidPollingReadTimeout()
+    {
+        return Math.Max(100, _options.RfidPollingReadTimeoutMilliseconds);
+    }
+
+    private int NormalizeRfidPollingEmptyConfirmCount()
+    {
+        return Math.Max(1, _options.RfidPollingEmptyConfirmCount);
+    }
+
+    private int IncrementRfidPollingEmptyCount(string stateKey)
+    {
+        _rfidPollingEmptyCounts.TryGetValue(stateKey, out var count);
+        count++;
+        _rfidPollingEmptyCounts[stateKey] = count;
+        return count;
+    }
+
+    private static bool ShouldLogRfidPollingEmptyPending(
+        int emptyCount,
+        int emptyConfirmCount)
+    {
+        return emptyCount <= 3 ||
+            emptyCount == emptyConfirmCount ||
+            emptyCount % 5 == 0;
+    }
+
+    private sealed record PresenceSnapshot(bool IsLoaded, string Tag);
 }

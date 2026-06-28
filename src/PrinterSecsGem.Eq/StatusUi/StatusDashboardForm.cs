@@ -105,7 +105,7 @@ public sealed class StatusDashboardForm : Form
         _statusEvents = statusEvents;
         _uiText = new StatusUiText(statusUiOptions.Value);
 
-        Text = _uiText["WindowTitle"];
+        Text = $"{_uiText["WindowTitle"]} {ApplicationInfo.DisplayVersion}";
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(960, 700);
         Size = new Size(1180, 860);
@@ -169,7 +169,7 @@ public sealed class StatusDashboardForm : Form
         {
             AutoSize = false,
             Dock = DockStyle.Fill,
-            Text = _uiText["DashboardTitle"],
+            Text = $"{_uiText["DashboardTitle"]} {ApplicationInfo.DisplayVersion}",
             Font = TitleFont,
             ForeColor = TextColor,
             TextAlign = ContentAlignment.MiddleLeft,
@@ -1145,6 +1145,7 @@ public sealed class StatusDashboardForm : Form
         status = status
             .Replace("Display disabled: ERackSensorDisplay:Enabled=false", "屏幕禁用: SensorDisplay=false", StringComparison.OrdinalIgnoreCase)
             .Replace("Display disabled: ERackHardware:Enabled=false", "屏幕禁用: 硬件未启用", StringComparison.OrdinalIgnoreCase)
+            .Replace("Display enabled: RFID polling presence mode", "屏幕启用: RFID轮询", StringComparison.OrdinalIgnoreCase)
             .Replace("Display enabled: waiting for sensor state", "屏幕启用: 等待传感器", StringComparison.OrdinalIgnoreCase)
             .Replace("Mock display: real screen not connected", "模拟屏幕: 未接真实屏", StringComparison.OrdinalIgnoreCase);
 
@@ -1200,9 +1201,14 @@ public sealed class StatusDashboardForm : Form
                 : "Display disabled: ERackHardware:Enabled=false";
         }
 
-        return _sensorDisplayOptions.Enabled
-            ? "Display enabled: waiting for sensor state"
-            : "Display disabled: ERackSensorDisplay:Enabled=false";
+        if (!_sensorDisplayOptions.Enabled)
+        {
+            return "Display disabled: ERackSensorDisplay:Enabled=false";
+        }
+
+        return _sensorDisplayOptions.IsRfidPollingMode
+            ? "Display enabled: RFID polling presence mode"
+            : "Display enabled: waiting for sensor state";
     }
 
     private sealed class BorderedPanel : Panel

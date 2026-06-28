@@ -86,6 +86,29 @@ PrinterSecsGem.Eq 配置和现场操作说明
 - KeepPortOpen=true 表示程序运行期间保持串口打开，减少反复开关串口。
 - 同一时间不要再打开其他会占用同一个 COM 口的软件。
 
+传感器/屏幕自动通路配置：
+
+  ERackSensorDisplay:Enabled
+  ERackSensorDisplay:PresenceMode
+  ERackSensorDisplay:PollIntervalMilliseconds
+  ERackSensorDisplay:RfidPollingReadTimeoutMilliseconds
+  ERackSensorDisplay:RfidPollingEmptyConfirmCount
+
+PresenceMode 可选：
+
+  Sensor       = 默认传感器模式，先读传感器；有货时读 RFID 并显示 tag，无货时清屏。
+  RfidPolling  = 临时 RFID 轮询模式，跳过传感器；按固定节拍直接读 RFID。
+
+现场因传感器硬件异常需要临时绕过传感器时，设置：
+
+  ERackSensorDisplay:Enabled = true
+  ERackSensorDisplay:PresenceMode = RfidPolling
+  ERackSensorDisplay:PollIntervalMilliseconds = 1200
+  ERackSensorDisplay:RfidPollingReadTimeoutMilliseconds = 700
+  ERackSensorDisplay:RfidPollingEmptyConfirmCount = 3
+
+RfidPolling 模式下：读到 tag 立即上报有货并显示 tag；读不到 tag、串口异常、超时或协议错误都计为一次“读不到”。连续 3 次读不到可确认无货并清屏。上报仍沿用当前格口状态上报格式，并且只在有货/无货或有货 tag 变化时上报。
+
 
 五、打印配置
 ------------

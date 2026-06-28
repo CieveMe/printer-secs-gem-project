@@ -205,7 +205,7 @@ public sealed class ERackSerialHardwareGateway : IHardwareGateway, IDisposable
                     var tag = ReadInventoryTag(location, query.ReadLengthBytes, cancellationToken);
                     statuses.Add(new ShelfLocationStatus(location.LocationId, tag, !string.IsNullOrWhiteSpace(tag)));
 
-                    _logger.LogInformation(
+                    _logger.LogDebug(
                         "ERack RFID inventory completed: shelf={ShelfId}, location={LocationId}, tag={Tag}, loaded={Loaded}, readLength={ReadLength}",
                         location.ShelfId,
                         location.LocationId,
@@ -837,7 +837,8 @@ public sealed class ERackSerialHardwareGateway : IHardwareGateway, IDisposable
 
     private static LogLevel GetOperationLogLevel(string operation)
     {
-        return operation.Equals("sensor", StringComparison.OrdinalIgnoreCase)
+        return operation.Equals("sensor", StringComparison.OrdinalIgnoreCase) ||
+            operation.Equals("inventory", StringComparison.OrdinalIgnoreCase)
             ? LogLevel.Debug
             : LogLevel.Information;
     }

@@ -241,6 +241,7 @@ static void LogEffectiveConfiguration(IServiceProvider services)
     var erackClientOptions = services.GetRequiredService<IOptions<ERackClientOptions>>().Value;
     var simulationOptions = services.GetRequiredService<IOptions<ERackSimulationOptions>>().Value;
 
+    logger.LogInformation("Application version: {Version}", ApplicationInfo.DisplayVersion);
     logger.LogInformation(
         "Effective runtime config: mode={RuntimeMode}, unitEnabled={UnitEnabled}, serverEnabled={ServerEnabled}",
         runtimeOptions.NormalizedMode,
@@ -269,9 +270,12 @@ static void LogEffectiveConfiguration(IServiceProvider services)
         erackOptions.KeepPortOpen,
         erackOptions.WriteTagStartPage);
     logger.LogInformation(
-        "Effective ERack sensor/display config: enabled={Enabled}, pollIntervalMs={PollIntervalMilliseconds}, sensorCommand=0x{SensorCommand:X2}, sensorPayloadIndex={SensorPayloadIndex}, checkLevel={CheckLevel}",
+        "Effective ERack sensor/display config: enabled={Enabled}, presenceMode={PresenceMode}, pollIntervalMs={PollIntervalMilliseconds}, rfidPollingReadTimeoutMs={RfidPollingReadTimeoutMilliseconds}, emptyConfirmCount={EmptyConfirmCount}, sensorCommand=0x{SensorCommand:X2}, sensorPayloadIndex={SensorPayloadIndex}, checkLevel={CheckLevel}",
         sensorDisplayOptions.Enabled,
-        sensorDisplayOptions.PollIntervalMilliseconds,
+        sensorDisplayOptions.NormalizedPresenceMode,
+        Math.Max(100, sensorDisplayOptions.PollIntervalMilliseconds),
+        sensorDisplayOptions.RfidPollingReadTimeoutMilliseconds,
+        sensorDisplayOptions.RfidPollingEmptyConfirmCount,
         sensorDisplayOptions.SensorCommand,
         sensorDisplayOptions.SensorPayloadIndex,
         sensorDisplayOptions.CheckLevel);
@@ -544,7 +548,10 @@ static IEnumerable<KeyValuePair<string, string?>> GetDefaultConfigurationValues(
     yield return new("ERackHardware:DefaultLocationId", "LOC001");
 
     yield return new("ERackSensorDisplay:Enabled", "false");
+    yield return new("ERackSensorDisplay:PresenceMode", "Sensor");
     yield return new("ERackSensorDisplay:PollIntervalMilliseconds", "500");
+    yield return new("ERackSensorDisplay:RfidPollingReadTimeoutMilliseconds", "700");
+    yield return new("ERackSensorDisplay:RfidPollingEmptyConfirmCount", "3");
     yield return new("ERackSensorDisplay:SensorCommand", "5");
     yield return new("ERackSensorDisplay:SensorPayloadIndex", "1");
     yield return new("ERackSensorDisplay:CheckLevel", "0");

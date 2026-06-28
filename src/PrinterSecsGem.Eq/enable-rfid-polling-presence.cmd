@@ -5,8 +5,9 @@ cd /d "%~dp0"
 call :update_config
 if errorlevel 1 exit /b 1
 
-echo Real sensor/display workflow enabled.
-echo Use this only after MCU sensor and display command rules are confirmed.
+echo RFID polling presence workflow enabled.
+echo Sensor reads are bypassed. Empty/failed RFID reads are confirmed 3 times before no-goods.
+echo RFID polling interval is set to 1200 ms.
 echo Restart PrinterSecsGem.Eq.exe for the change to take effect.
 ping -n 4 127.0.0.1 >nul
 exit /b 0
@@ -14,7 +15,7 @@ exit /b 0
 :update_config
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$base='%~dp0';" ^
-  "$values=[ordered]@{'ERackSimulation:Enabled'='false';'ERackHardware:Enabled'='true';'ERackSensorDisplay:Enabled'='true';'ERackSensorDisplay:PresenceMode'='Sensor';'ERackSensorDisplay:PollIntervalMilliseconds'='500'};" ^
+  "$values=[ordered]@{'ERackSimulation:Enabled'='false';'ERackHardware:Enabled'='true';'ERackSensorDisplay:Enabled'='true';'ERackSensorDisplay:PresenceMode'='RfidPolling';'ERackSensorDisplay:PollIntervalMilliseconds'='1200';'ERackSensorDisplay:RfidPollingReadTimeoutMilliseconds'='700';'ERackSensorDisplay:RfidPollingEmptyConfirmCount'='3'};" ^
   "$paths=@((Join-Path $base 'App.config'));" ^
   "$updated=0;" ^
   "foreach($path in $paths){" ^
