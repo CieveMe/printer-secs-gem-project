@@ -14,6 +14,8 @@ public sealed class SecsEventOptions
 
     public uint RfidWriteCeid { get; set; } = 2002;
 
+    public uint RfidWriteFailedCeid { get; set; } = 2005;
+
     public uint RfidWriteRptid { get; set; } = 2002;
 
     public uint PrintCompletedCeid { get; set; } = 2003;

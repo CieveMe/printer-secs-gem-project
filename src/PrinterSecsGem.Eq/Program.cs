@@ -470,6 +470,7 @@ static IEnumerable<KeyValuePair<string, string?>> GetDefaultConfigurationValues(
     yield return new("SecsEvents:TagReadCeid", "1001");
     yield return new("SecsEvents:TagReadRptid", "2001");
     yield return new("SecsEvents:RfidWriteCeid", "2002");
+    yield return new("SecsEvents:RfidWriteFailedCeid", "2005");
     yield return new("SecsEvents:RfidWriteRptid", "2002");
     yield return new("SecsEvents:PrintCompletedCeid", "2003");
     yield return new("SecsEvents:PrintFailedCeid", "2004");

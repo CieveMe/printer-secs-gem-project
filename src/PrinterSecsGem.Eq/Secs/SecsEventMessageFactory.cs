@@ -47,9 +47,13 @@ public sealed class SecsEventMessageFactory
 
     public SecsMessage CreateRfidWriteEvent(RfidWriteEvent rfidWriteEvent)
     {
+        var ceid = rfidWriteEvent.ResultCode == 0
+            ? _options.RfidWriteCeid
+            : _options.RfidWriteFailedCeid;
+
         return CreateS6F11(
             "RfidWriteResultEvent",
-            _options.RfidWriteCeid,
+            ceid,
             _options.RfidWriteRptid,
             L(
                 A(rfidWriteEvent.ShelfId),
