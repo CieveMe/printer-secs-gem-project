@@ -500,11 +500,19 @@ public sealed class ERackSerialHardwareGateway : IHardwareGateway, IDisposable
 
         if (response.Payload.Length == 1)
         {
+            LogInventoryFailureRawBytes(
+                location,
+                response,
+                $"RFID reader returned error code {response.Payload[0]} (0x{response.Payload[0]:X2})");
             throw new InvalidOperationException($"RFID reader returned error code {response.Payload[0]} (0x{response.Payload[0]:X2})");
         }
 
         if (response.Payload.Length < 32)
         {
+            LogInventoryFailureRawBytes(
+                location,
+                response,
+                $"RFID response payload is too short: {response.Payload.Length}");
             throw new InvalidOperationException($"RFID response payload is too short: {response.Payload.Length}");
         }
 
@@ -809,7 +817,31 @@ public sealed class ERackSerialHardwareGateway : IHardwareGateway, IDisposable
             }
         }
 
-        throw new TimeoutException($"RFID response timeout after {waitCount} attempts; receivedLength={length}; receivedHex={ToHex(buffer.AsSpan(0, length))}");
+        var receivedHex = ToHex(buffer.AsSpan(0, length));
+        _logger.LogWarning(
+            "ERack RFID {Operation} response timeout: receivedLength={ReceivedLength}, receivedHex={ReceivedHex}, payloadLength={PayloadLength}, payloadHex={PayloadHex}",
+            operation,
+            length,
+            receivedHex,
+            0,
+            ToHex(ReadOnlySpan<byte>.Empty));
+        throw new TimeoutException($"RFID response timeout after {waitCount} attempts; receivedLength={length}; receivedHex={receivedHex}");
+    }
+
+    private void LogInventoryFailureRawBytes(
+        ERackLocation location,
+        ERackFrame response,
+        string reason)
+    {
+        _logger.LogWarning(
+            "ERack RFID inventory failure raw bytes: shelf={ShelfId}, location={LocationId}, reason={Reason}, receivedLength={ReceivedLength}, receivedHex={ReceivedHex}, payloadLength={PayloadLength}, payloadHex={PayloadHex}",
+            location.ShelfId,
+            location.LocationId,
+            reason,
+            response.RawBytes.Length,
+            ToHex(response.RawBytes),
+            response.Payload.Length,
+            ToHex(response.Payload));
     }
 
     private static bool TryFindResponse(
@@ -850,7 +882,7 @@ public sealed class ERackSerialHardwareGateway : IHardwareGateway, IDisposable
 
     private static byte[] BuildDisplayPayload(string displayText, int maxBytes)
     {
-        var safeMaxBytes = Math.Clamp(maxBytes, 18, 512);
+        var safeMaxBytes = Math.Clamp(maxBytes, 1, 512);
         var text = displayText ?? string.Empty;
         if (text.Any(character => character > 0x7F || char.IsControl(character)))
         {
@@ -858,18 +890,12 @@ public sealed class ERackSerialHardwareGateway : IHardwareGateway, IDisposable
         }
 
         var textBytes = Encoding.ASCII.GetBytes(text);
-        var maxTextBytes = safeMaxBytes - 18;
-        if (textBytes.Length > maxTextBytes)
+        if (textBytes.Length > safeMaxBytes)
         {
-            textBytes = textBytes.AsSpan(0, maxTextBytes).ToArray();
+            textBytes = textBytes.AsSpan(0, safeMaxBytes).ToArray();
         }
 
-        var payload = new byte[textBytes.Length + 18];
-        textBytes.CopyTo(payload.AsSpan());
-        payload[textBytes.Length] = 0x0D;
-        payload[textBytes.Length + 1] = 0x0A;
-        payload.AsSpan(textBytes.Length + 2, 16).Fill(0x7F);
-        return payload;
+        return textBytes;
     }
 
     private static string GetPortKey(ERackLocation location)
@@ -881,6 +907,6 @@ public sealed class ERackSerialHardwareGateway : IHardwareGateway, IDisposable
     {
         return data.IsEmpty
             ? "<empty>"
-            : string.Join(" ", data.ToArray().Select(value => value.ToString("X2")));
+            : BitConverter.ToString(data.ToArray()).Replace("-", " ");
     }
 }

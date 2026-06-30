@@ -66,11 +66,12 @@ internal static class ERackProtocol
             return false;
         }
 
+        var rawBytes = packet.ToArray();
         var payload = payloadLength == 0
             ? Array.Empty<byte>()
             : packet.Slice(8, payloadLength).ToArray();
 
-        response = new ERackFrame(packet[4], packet[7], payload);
+        response = new ERackFrame(packet[4], packet[7], payload, rawBytes);
         return true;
     }
 

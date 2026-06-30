@@ -16,6 +16,7 @@ public sealed class ERackSensorDisplayWorker : BackgroundService
     private readonly ERackHardwareOptions _erackOptions;
     private readonly ERackSensorDisplayOptions _options;
     private readonly ERackLocationRegistry _locations;
+    private readonly RfidPollingStateCache _rfidPollingCache;
     private readonly ERackSerialHardwareGateway _gateway;
     private readonly IERackEventSink _eventSink;
     private readonly StatusUiEventBus _statusEvents;
@@ -29,6 +30,7 @@ public sealed class ERackSensorDisplayWorker : BackgroundService
         IOptions<ERackHardwareOptions> erackOptions,
         IOptions<ERackSensorDisplayOptions> options,
         ERackLocationRegistry locations,
+        RfidPollingStateCache rfidPollingCache,
         ERackSerialHardwareGateway gateway,
         IERackEventSink eventSink,
         StatusUiEventBus statusEvents,
@@ -38,6 +40,7 @@ public sealed class ERackSensorDisplayWorker : BackgroundService
         _erackOptions = erackOptions.Value;
         _options = options.Value;
         _locations = locations;
+        _rfidPollingCache = rfidPollingCache;
         _gateway = gateway;
         _eventSink = eventSink;
         _statusEvents = statusEvents;
@@ -212,6 +215,7 @@ public sealed class ERackSensorDisplayWorker : BackgroundService
 
         _rfidPollingEmptyCounts[stateKey] = 0;
         var current = new PresenceSnapshot(true, tag);
+        _rfidPollingCache.Update(location, current.Tag, current.IsLoaded);
         var shouldPublish = HasRfidPollingStateChanged(stateKey, current);
         if (!shouldPublish && !_options.UpdateDisplayOnEveryPoll)
         {
@@ -291,6 +295,7 @@ public sealed class ERackSensorDisplayWorker : BackgroundService
         }
 
         var current = new PresenceSnapshot(false, string.Empty);
+        _rfidPollingCache.Update(location, current.Tag, current.IsLoaded);
         var shouldPublish = HasRfidPollingStateChanged(stateKey, current);
         if (!shouldPublish && !_options.UpdateDisplayOnEveryPoll)
         {

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PrinterSecsGem.Eq.ErackNetwork;
 using PrinterSecsGem.Eq.Hardware;
+using PrinterSecsGem.Eq.Hardware.ERack;
 using PrinterSecsGem.Eq.Models;
 using PrinterSecsGem.Eq.Printing;
 using PrinterSecsGem.Eq.StatusUi;
@@ -15,6 +16,8 @@ public sealed class SecsMessageDispatcher
     private readonly IPrinterGateway _printerGateway;
     private readonly IHardwareGateway _hardwareGateway;
     private readonly RuntimeOptions _runtimeOptions;
+    private readonly ERackSensorDisplayOptions _sensorDisplayOptions;
+    private readonly RfidPollingStateCache _rfidPollingCache;
     private readonly IERackUnitRouter _unitRouter;
     private readonly IERackEventSink _eventSink;
     private readonly StatusUiEventBus _statusEvents;
@@ -24,6 +27,8 @@ public sealed class SecsMessageDispatcher
         IPrinterGateway printerGateway,
         IHardwareGateway hardwareGateway,
         IOptions<RuntimeOptions> runtimeOptions,
+        IOptions<ERackSensorDisplayOptions> sensorDisplayOptions,
+        RfidPollingStateCache rfidPollingCache,
         IERackUnitRouter unitRouter,
         IERackEventSink eventSink,
         StatusUiEventBus statusEvents,
@@ -32,6 +37,8 @@ public sealed class SecsMessageDispatcher
         _printerGateway = printerGateway;
         _hardwareGateway = hardwareGateway;
         _runtimeOptions = runtimeOptions.Value;
+        _sensorDisplayOptions = sensorDisplayOptions.Value;
+        _rfidPollingCache = rfidPollingCache;
         _unitRouter = unitRouter;
         _eventSink = eventSink;
         _statusEvents = statusEvents;
@@ -186,9 +193,9 @@ public sealed class SecsMessageDispatcher
     private async Task<SecsMessage> HandleShelfStatusQueryAsync(SecsMessage primaryMessage, CancellationToken cancellationToken)
     {
         var query = new ShelfStatusQuery(
-            SecsItemReader.ReadAscii(primaryMessage, 0, "SHELF001"),
-            SecsItemReader.ReadAscii(primaryMessage, 1, "ALL"),
-            SecsItemReader.ReadU1(primaryMessage, 2, 32));
+            SecsItemReader.ReadAsciiWithRawLog(primaryMessage, 0, "ShelfId", "SHELF001", _logger),
+            SecsItemReader.ReadAsciiWithRawLog(primaryMessage, 1, "LocationId", "ALL", _logger),
+            SecsItemReader.ReadU1WithRawLog(primaryMessage, 2, "ReadLengthBytes", 32, _logger));
 
         _logger.LogInformation(
             "Handle shelf status query: shelf={ShelfId}, location={LocationId}, readLength={ReadLength}",
@@ -199,10 +206,21 @@ public sealed class SecsMessageDispatcher
             StatusUiEventCategories.SecsLog,
             $"S5F11 shelf status query: shelf={query.ShelfId}, location={query.LocationId}, readLength={query.ReadLengthBytes}.");
 
-        var result = UseRemoteRouting
+        var result = UseRfidPollingCache
+            ? _rfidPollingCache.Query(query)
+            : UseRemoteRouting
             ? await _unitRouter.QueryShelfStatusAsync(query, cancellationToken)
             : await _hardwareGateway.QueryShelfStatusAsync(query, cancellationToken);
-        var resultCode = result.Success ? (byte)0 : result.Code;
+        var resultCode = ToShelfStatusReplyCode(result);
+
+        if (UseRfidPollingCache)
+        {
+            _logger.LogInformation(
+                "S5F11 shelf status query returned RFID polling cache: shelf={ShelfId}, location={LocationId}, locations={LocationCount}",
+                result.ShelfId,
+                query.LocationId,
+                result.Locations.Count);
+        }
 
         _logger.LogInformation(
             "Shelf status result: success={Success}, code={Code}, shelf={ShelfId}, locations={LocationCount}",
@@ -257,4 +275,20 @@ public sealed class SecsMessageDispatcher
     }
 
     private bool UseRemoteRouting => _runtimeOptions.IsServerEnabled;
+
+    private bool UseRfidPollingCache => _runtimeOptions.IsUnitEnabled && _sensorDisplayOptions.IsRfidPollingMode;
+
+    private static byte ToShelfStatusReplyCode(ShelfStatusResult result)
+    {
+        if (result.Success)
+        {
+            return 0;
+        }
+
+        return result.Code switch
+        {
+            1 or 6 => 1,
+            _ => 2
+        };
+    }
 }

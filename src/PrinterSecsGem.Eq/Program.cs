@@ -91,6 +91,7 @@ var builder = Host.CreateDefaultBuilder(hostArgs)
         });
         services.AddSingleton<MockHardwareGateway>();
         services.AddSingleton<ERackLocationRegistry>();
+        services.AddSingleton<RfidPollingStateCache>();
         services.AddSingleton<ERackSerialHardwareGateway>();
         services.AddSingleton<IHardwareGateway>(serviceProvider =>
         {

@@ -14,7 +14,9 @@ public sealed class ERackClientWorker : BackgroundService
 {
     private readonly RuntimeOptions _runtimeOptions;
     private readonly ERackClientOptions _options;
+    private readonly ERackSensorDisplayOptions _sensorDisplayOptions;
     private readonly ERackLocationRegistry _locations;
+    private readonly RfidPollingStateCache _rfidPollingCache;
     private readonly IHardwareGateway _hardwareGateway;
     private readonly IPrinterGateway _printerGateway;
     private readonly StatusUiEventBus _statusEvents;
@@ -25,7 +27,9 @@ public sealed class ERackClientWorker : BackgroundService
     public ERackClientWorker(
         IOptions<RuntimeOptions> runtimeOptions,
         IOptions<ERackClientOptions> options,
+        IOptions<ERackSensorDisplayOptions> sensorDisplayOptions,
         ERackLocationRegistry locations,
+        RfidPollingStateCache rfidPollingCache,
         IHardwareGateway hardwareGateway,
         IPrinterGateway printerGateway,
         StatusUiEventBus statusEvents,
@@ -33,7 +37,9 @@ public sealed class ERackClientWorker : BackgroundService
     {
         _runtimeOptions = runtimeOptions.Value;
         _options = options.Value;
+        _sensorDisplayOptions = sensorDisplayOptions.Value;
         _locations = locations;
+        _rfidPollingCache = rfidPollingCache;
         _hardwareGateway = hardwareGateway;
         _printerGateway = printerGateway;
         _statusEvents = statusEvents;
@@ -216,9 +222,19 @@ public sealed class ERackClientWorker : BackgroundService
         CancellationToken cancellationToken)
     {
         var payload = envelope.ReadPayload<ReadShelfStatusPayload>();
-        var result = await _hardwareGateway.QueryShelfStatusAsync(
-            new ShelfStatusQuery(payload.ShelfId, payload.LocationId, payload.ReadLengthBytes),
-            cancellationToken);
+        var query = new ShelfStatusQuery(payload.ShelfId, payload.LocationId, payload.ReadLengthBytes);
+        var result = _sensorDisplayOptions.IsRfidPollingMode
+            ? _rfidPollingCache.Query(query)
+            : await _hardwareGateway.QueryShelfStatusAsync(query, cancellationToken);
+
+        if (_sensorDisplayOptions.IsRfidPollingMode)
+        {
+            _logger.LogInformation(
+                "ERACK unit client returned RFID polling cache for shelf status request: shelf={ShelfId}, location={LocationId}, locations={LocationCount}",
+                result.ShelfId,
+                payload.LocationId,
+                result.Locations.Count);
+        }
 
         await SendResponseAsync(
             envelope,
