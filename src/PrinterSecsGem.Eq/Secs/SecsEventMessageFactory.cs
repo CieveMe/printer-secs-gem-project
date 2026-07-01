@@ -47,7 +47,8 @@ public sealed class SecsEventMessageFactory
 
     public SecsMessage CreateRfidWriteEvent(RfidWriteEvent rfidWriteEvent)
     {
-        var ceid = rfidWriteEvent.ResultCode == 0
+        var protocolResult = ToRfidWriteProtocolReply(rfidWriteEvent.ResultCode, rfidWriteEvent.Description);
+        var ceid = protocolResult.Code == 0
             ? _options.RfidWriteCeid
             : _options.RfidWriteFailedCeid;
 
@@ -59,8 +60,8 @@ public sealed class SecsEventMessageFactory
                 A(rfidWriteEvent.ShelfId),
                 A(rfidWriteEvent.LocationId),
                 A(rfidWriteEvent.Tag),
-                U1(rfidWriteEvent.ResultCode),
-                A(rfidWriteEvent.Description),
+                U1(protocolResult.Code),
+                A(protocolResult.Description),
                 U4((uint)rfidWriteEvent.Timestamp.ToUnixTimeSeconds())));
     }
 
@@ -103,4 +104,50 @@ public sealed class SecsEventMessageFactory
     {
         return unchecked((ushort)Interlocked.Increment(ref _nextDataId));
     }
+
+    private static ProtocolReply ToRfidWriteProtocolReply(byte code, string description)
+    {
+        if (code == 0)
+        {
+            return new ProtocolReply(0, "Write Success");
+        }
+
+        if (code == 1 ||
+            (code == 6 &&
+                description.Contains("location not configured", StringComparison.OrdinalIgnoreCase)))
+        {
+            return new ProtocolReply(1, "Location Not Found");
+        }
+
+        if (code is 2 or 3)
+        {
+            return new ProtocolReply(2, "RFID Format Error");
+        }
+
+        return new ProtocolReply(code, ToAsciiProtocolDescription(description, $"Write Failed: code {code}"));
+    }
+
+    private static string ToAsciiProtocolDescription(string description, string fallback)
+    {
+        var text = string.IsNullOrWhiteSpace(description)
+            ? fallback
+            : description.Trim();
+
+        text = text
+            .Replace("货架编号为空", "Shelf ID Empty", StringComparison.OrdinalIgnoreCase)
+            .Replace("货架未在线", "Shelf Not Online", StringComparison.OrdinalIgnoreCase)
+            .Replace("ERACK单元响应超时", "ERACK Unit Timeout", StringComparison.OrdinalIgnoreCase)
+            .Replace("ERACK单元转发失败", "ERACK Unit Route Failed", StringComparison.OrdinalIgnoreCase);
+
+        var builder = new System.Text.StringBuilder(text.Length);
+        foreach (var character in text)
+        {
+            builder.Append(character is >= ' ' and <= '~' ? character : ' ');
+        }
+
+        var ascii = builder.ToString().Trim();
+        return string.IsNullOrWhiteSpace(ascii) ? fallback : ascii;
+    }
+
+    private sealed record ProtocolReply(byte Code, string Description);
 }

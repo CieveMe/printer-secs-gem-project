@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PrinterSecsGem.Eq.ErackNetwork;
@@ -151,21 +152,21 @@ public sealed class SecsMessageDispatcher
         var result = UseRemoteRouting
             ? await _unitRouter.WriteTagAsync(command, cancellationToken)
             : await _hardwareGateway.WriteTagAsync(command, cancellationToken);
-        var resultCode = result.Success ? (byte)0 : result.Code;
+        var protocolResult = ToWriteTagReply(result);
 
         _logger.LogInformation(
             "Write tag result: success={Success}, code={Code}, description={Description}",
             result.Success,
-            resultCode,
-            result.Description);
+            protocolResult.Code,
+            protocolResult.Description);
         _statusEvents.Publish(
             StatusUiEventCategories.SecsLog,
-            $"S10F11 write tag result: code={resultCode}, description={result.Description}.");
+            $"S10F11 write tag result: code={protocolResult.Code}, description={protocolResult.Description}.");
         _statusEvents.Publish(
             StatusUiEventCategories.RfidStatus,
             result.Success
                 ? $"Written: {command.Tag}"
-                : $"Write failed: code={resultCode}, {result.Description}");
+                : $"Write failed: code={protocolResult.Code}, {protocolResult.Description}");
         if (!UseRemoteRouting)
         {
             await _eventSink.PublishRfidWriteAsync(
@@ -173,8 +174,8 @@ public sealed class SecsMessageDispatcher
                     command.ShelfId,
                     command.LocationId,
                     command.Tag,
-                    resultCode,
-                    result.Description,
+                    protocolResult.Code,
+                    protocolResult.Description,
                     DateTimeOffset.Now),
                 cancellationToken);
         }
@@ -185,8 +186,8 @@ public sealed class SecsMessageDispatcher
             SecsItem = L(
                 A(command.ShelfId),
                 A(command.LocationId),
-                U1(resultCode),
-                A(result.Description))
+                U1(protocolResult.Code),
+                A(protocolResult.Description))
         };
     }
 
@@ -212,6 +213,7 @@ public sealed class SecsMessageDispatcher
             ? await _unitRouter.QueryShelfStatusAsync(query, cancellationToken)
             : await _hardwareGateway.QueryShelfStatusAsync(query, cancellationToken);
         var resultCode = ToShelfStatusReplyCode(result);
+        var resultDescription = ToShelfStatusReplyDescription(result, resultCode);
 
         if (UseRfidPollingCache)
         {
@@ -231,7 +233,7 @@ public sealed class SecsMessageDispatcher
         var firstLocation = result.Locations.FirstOrDefault();
         _statusEvents.Publish(
             StatusUiEventCategories.SecsLog,
-            $"S5F11 shelf status result: code={resultCode}, tag={firstLocation?.Tag ?? string.Empty}, loaded={firstLocation?.IsLoaded}.");
+            $"S5F11 shelf status result: code={resultCode}, description={resultDescription}, tag={firstLocation?.Tag ?? string.Empty}, loaded={firstLocation?.IsLoaded}.");
         _statusEvents.Publish(
             StatusUiEventCategories.RfidStatus,
             result.Success
@@ -250,7 +252,8 @@ public sealed class SecsMessageDispatcher
                         A(location.LocationId),
                         A(location.Tag),
                         U1(location.IsLoaded ? (byte)1 : (byte)0))).ToArray()),
-                U1(resultCode))
+                U1(resultCode),
+                A(resultDescription))
         };
     }
 
@@ -291,4 +294,73 @@ public sealed class SecsMessageDispatcher
             _ => 2
         };
     }
+
+    private static ProtocolReply ToWriteTagReply(OperationResult result)
+    {
+        if (result.Success)
+        {
+            return new ProtocolReply(0, "Write Success");
+        }
+
+        if (IsLocationNotFound(result))
+        {
+            return new ProtocolReply(1, "Location Not Found");
+        }
+
+        if (IsRfidFormatError(result))
+        {
+            return new ProtocolReply(2, "RFID Format Error");
+        }
+
+        return new ProtocolReply(
+            result.Code,
+            ToAsciiProtocolDescription(result.Description, $"Write Failed: code {result.Code}"));
+    }
+
+    private static string ToShelfStatusReplyDescription(ShelfStatusResult result, byte resultCode)
+    {
+        return resultCode switch
+        {
+            0 => "Read Success",
+            1 => "Location Not Found",
+            2 => "Read Failed",
+            _ => ToAsciiProtocolDescription(result.Description, $"Read Failed: code {resultCode}")
+        };
+    }
+
+    private static bool IsLocationNotFound(OperationResult result)
+    {
+        return result.Code == 1 ||
+            (result.Code == 6 &&
+                result.Description.Contains("location not configured", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsRfidFormatError(OperationResult result)
+    {
+        return result.Code is 2 or 3;
+    }
+
+    private static string ToAsciiProtocolDescription(string description, string fallback)
+    {
+        var text = string.IsNullOrWhiteSpace(description)
+            ? fallback
+            : description.Trim();
+
+        text = text
+            .Replace("货架编号为空", "Shelf ID Empty", StringComparison.OrdinalIgnoreCase)
+            .Replace("货架未在线", "Shelf Not Online", StringComparison.OrdinalIgnoreCase)
+            .Replace("ERACK单元响应超时", "ERACK Unit Timeout", StringComparison.OrdinalIgnoreCase)
+            .Replace("ERACK单元转发失败", "ERACK Unit Route Failed", StringComparison.OrdinalIgnoreCase);
+
+        var builder = new StringBuilder(text.Length);
+        foreach (var character in text)
+        {
+            builder.Append(character is >= ' ' and <= '~' ? character : ' ');
+        }
+
+        var ascii = builder.ToString().Trim();
+        return string.IsNullOrWhiteSpace(ascii) ? fallback : ascii;
+    }
+
+    private sealed record ProtocolReply(byte Code, string Description);
 }
