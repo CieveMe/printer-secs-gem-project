@@ -140,10 +140,12 @@ public sealed class ERackSerialHardwareGateway : IHardwareGateway, IDisposable
             return Task.FromResult(OperationResult.Fail(6, $"location not configured: {command.LocationId}"));
         }
 
-        var tag = command.Tag.Trim();
-        if (tag.Length < 1 || tag.Length > 32)
+        var tag = command.Tag ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(tag) || tag.Length > 32)
         {
-            return Task.FromResult(OperationResult.Fail(2, "tag length must be 1-32 characters"));
+            return Task.FromResult(OperationResult.Fail(
+                2,
+                "tag must contain 1-32 characters and at least one non-space character"));
         }
 
         if (tag.Any(character => character > 0x7F || char.IsControl(character)))
@@ -335,13 +337,14 @@ public sealed class ERackSerialHardwareGateway : IHardwareGateway, IDisposable
         int maxBytes,
         CancellationToken cancellationToken)
     {
-        var payload = BuildDisplayPayload(displayText, maxBytes);
+        var displayValue = ERackTagDecoder.ToDisplayText(displayText);
+        var payload = BuildDisplayPayload(displayValue, maxBytes);
         return SendDisplayPayloadAsync(
             location,
             payload,
             waitTimeMilliseconds,
             minWaitCount,
-            displayText,
+            displayValue,
             cancellationToken);
     }
 
@@ -448,8 +451,7 @@ public sealed class ERackSerialHardwareGateway : IHardwareGateway, IDisposable
                 return tagBytes.Length == 0
                     ? string.Empty
                     : Encoding.ASCII
-                        .GetString(tagBytes.AsSpan(0, NormalizeReadLength(readLengthBytes)))
-                        .TrimEnd('\0', ' ');
+                        .GetString(tagBytes.AsSpan(0, NormalizeReadLength(readLengthBytes)));
             }
             finally
             {
@@ -621,7 +623,7 @@ public sealed class ERackSerialHardwareGateway : IHardwareGateway, IDisposable
                     payload);
 
                 _logger.LogInformation(
-                    "Sending ERack RFID write request: port={PortName}, baudRate={BaudRate}, address={Address}, startPage={StartPage}, shelf={ShelfId}, location={LocationId}, tag={Tag}, logicalLength={LogicalLength}, hardwareTag={HardwareTag}, payloadHex={PayloadHex}, requestHex={RequestHex}",
+                    "Sending ERack RFID write request: port={PortName}, baudRate={BaudRate}, address={Address}, startPage={StartPage}, shelf={ShelfId}, location={LocationId}, tag={Tag}, tagLength={TagLength}, tagHex={TagHex}, logicalLength={LogicalLength}, hardwareTag={HardwareTag}, payloadHex={PayloadHex}, requestHex={RequestHex}",
                     location.PortName,
                     location.BaudRate,
                     location.DeviceAddress,
@@ -629,6 +631,8 @@ public sealed class ERackSerialHardwareGateway : IHardwareGateway, IDisposable
                     command.ShelfId,
                     location.LocationId,
                     tag,
+                    tag.Length,
+                    ToHex(Encoding.ASCII.GetBytes(tag)),
                     logicalLength,
                     hardwareTag,
                     ToHex(payload),

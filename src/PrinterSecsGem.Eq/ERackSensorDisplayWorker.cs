@@ -183,12 +183,13 @@ public sealed class ERackSensorDisplayWorker : BackgroundService
 
         if (status.Success)
         {
-            tag = status.Locations.FirstOrDefault()?.Tag?.Trim() ?? string.Empty;
+            tag = status.Locations.FirstOrDefault()?.Tag ?? string.Empty;
+            var statusTag = ERackTagDecoder.ToDisplayText(tag);
             _statusEvents.Publish(
                 StatusUiEventCategories.RfidStatus,
                 string.IsNullOrWhiteSpace(tag)
                     ? "RFID polling empty"
-                    : $"RFID polling loaded: {tag}");
+                    : $"RFID polling loaded: {statusTag}");
         }
         else
         {
@@ -222,15 +223,16 @@ public sealed class ERackSensorDisplayWorker : BackgroundService
             return;
         }
 
+        var displayText = ERackTagDecoder.ToDisplayText(current.Tag);
         var displayResult = await _gateway.SetDisplayTextAsync(
             location,
-            current.Tag,
+            displayText,
             _options.DisplayWaitTimeMilliseconds,
             _options.DisplayMinWaitCount,
             _options.DisplayMaxBytes,
             cancellationToken);
 
-        LogDisplayResult(location, current.Tag, displayResult, "RFID polling");
+        LogDisplayResult(location, displayText, displayResult, "RFID polling");
 
         if (shouldPublish)
         {
@@ -364,9 +366,10 @@ public sealed class ERackSensorDisplayWorker : BackgroundService
             return;
         }
 
+        var displayText = ERackTagDecoder.ToDisplayText(tag);
         var displayResult = await _gateway.SetDisplayTextAsync(
             location,
-            tag,
+            displayText,
             _options.DisplayWaitTimeMilliseconds,
             _options.DisplayMinWaitCount,
             _options.DisplayMaxBytes,
@@ -374,9 +377,9 @@ public sealed class ERackSensorDisplayWorker : BackgroundService
 
         _statusEvents.Publish(
             StatusUiEventCategories.RfidStatus,
-            string.IsNullOrWhiteSpace(tag) ? "Sensor loaded, no tag" : tag);
+            string.IsNullOrWhiteSpace(tag) ? "Sensor loaded, no tag" : displayText);
 
-        LogDisplayResult(location, tag, displayResult, "sensor state");
+        LogDisplayResult(location, displayText, displayResult, "sensor state");
         await PublishShelfStateEventAsync(location, tag, isLoaded: true, cancellationToken);
     }
 

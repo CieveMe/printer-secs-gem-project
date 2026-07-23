@@ -15,10 +15,10 @@ public sealed class RfidPollingStateCache
 
     public void Update(ERackLocation location, string tag, bool isLoaded)
     {
-        var normalizedTag = tag?.Trim() ?? string.Empty;
+        var rawTag = tag ?? string.Empty;
         _states[BuildKey(location.ShelfId, location.LocationId)] = new CachedRfidPollingState(
-            normalizedTag,
-            isLoaded && !string.IsNullOrWhiteSpace(normalizedTag),
+            rawTag,
+            isLoaded && !string.IsNullOrWhiteSpace(rawTag),
             DateTimeOffset.Now);
     }
 

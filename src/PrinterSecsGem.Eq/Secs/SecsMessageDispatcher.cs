@@ -141,10 +141,12 @@ public sealed class SecsMessageDispatcher
             SecsItemReader.ReadAscii(primaryMessage, 2));
 
         _logger.LogInformation(
-            "Handle write tag command: shelf={ShelfId}, location={LocationId}, tag={Tag}",
+            "Handle write tag command: shelf={ShelfId}, location={LocationId}, tag={Tag}, tagLength={TagLength}, tagHex={TagHex}",
             command.ShelfId,
             command.LocationId,
-            command.Tag);
+            command.Tag,
+            command.Tag.Length,
+            BitConverter.ToString(Encoding.ASCII.GetBytes(command.Tag)).Replace("-", " "));
         _statusEvents.Publish(
             StatusUiEventCategories.SecsLog,
             $"S10F11 write tag command: location={command.LocationId}, tag={command.Tag}.");

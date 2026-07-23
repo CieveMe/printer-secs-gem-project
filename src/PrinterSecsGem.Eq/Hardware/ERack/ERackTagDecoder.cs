@@ -16,7 +16,12 @@ internal static class ERackTagDecoder
         }
 
         var safeLength = Math.Clamp(RoundUpToBlock(readLengthBytes), BlockSize, TagStorageSize);
-        return Encoding.ASCII.GetString(tagBytes.AsSpan(0, safeLength)).TrimEnd('\0', ' ');
+        return Encoding.ASCII.GetString(tagBytes.AsSpan(0, safeLength));
+    }
+
+    public static string ToDisplayText(string? tag)
+    {
+        return (tag ?? string.Empty).TrimEnd('\0', ' ');
     }
 
     public static byte[] DecodeInventoryTagBytes(ReadOnlySpan<byte> payload)
