@@ -9,6 +9,7 @@ namespace PrinterSecsGem.Eq.Hardware.ERack;
 public sealed class ERackSerialHardwareGateway : IHardwareGateway, IDisposable
 {
     private readonly ERackHardwareOptions _fallbackOptions;
+    private readonly ERackSensorDisplayOptions _displayOptions;
     private readonly ERackLocationRegistry _locations;
     private readonly ILogger<ERackSerialHardwareGateway> _logger;
     private readonly object _syncRoot = new();
@@ -18,10 +19,12 @@ public sealed class ERackSerialHardwareGateway : IHardwareGateway, IDisposable
 
     public ERackSerialHardwareGateway(
         IOptions<ERackHardwareOptions> options,
+        IOptions<ERackSensorDisplayOptions> displayOptions,
         ERackLocationRegistry locations,
         ILogger<ERackSerialHardwareGateway> logger)
     {
         _fallbackOptions = options.Value;
+        _displayOptions = displayOptions.Value;
         _locations = locations;
         _logger = logger;
     }
@@ -233,6 +236,38 @@ public sealed class ERackSerialHardwareGateway : IHardwareGateway, IDisposable
                 return ShelfStatusResult.Fail(shelfId, 7, ex.Message);
             }
         }, cancellationToken);
+    }
+
+    public Task<OperationResult> SetDisplayAsync(
+        DisplayCommand command,
+        CancellationToken cancellationToken)
+    {
+        var location = _locations.Find(command.ShelfId, command.LocationId);
+        if (location is null)
+        {
+            return Task.FromResult(OperationResult.Fail(
+                6,
+                $"location not configured: {command.LocationId}"));
+        }
+
+        var displayText = command.Content ?? string.Empty;
+        if (displayText.Length == 0)
+        {
+            return ClearDisplayAsync(
+                location,
+                _displayOptions.DisplayWaitTimeMilliseconds,
+                _displayOptions.DisplayMinWaitCount,
+                cancellationToken);
+        }
+
+        var payload = BuildDisplayPayload(displayText, _displayOptions.DisplayMaxBytes);
+        return SendDisplayPayloadAsync(
+            location,
+            payload,
+            _displayOptions.DisplayWaitTimeMilliseconds,
+            _displayOptions.DisplayMinWaitCount,
+            displayText,
+            cancellationToken);
     }
 
     public Task<ERackSensorStateResult> ReadSensorStateAsync(

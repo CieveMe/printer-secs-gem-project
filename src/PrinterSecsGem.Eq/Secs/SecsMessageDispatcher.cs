@@ -16,6 +16,7 @@ public sealed class SecsMessageDispatcher
 {
     private readonly IPrinterGateway _printerGateway;
     private readonly IHardwareGateway _hardwareGateway;
+    private readonly RfidWriteWorkflow _rfidWriteWorkflow;
     private readonly RuntimeOptions _runtimeOptions;
     private readonly ERackSensorDisplayOptions _sensorDisplayOptions;
     private readonly RfidPollingStateCache _rfidPollingCache;
@@ -27,6 +28,7 @@ public sealed class SecsMessageDispatcher
     public SecsMessageDispatcher(
         IPrinterGateway printerGateway,
         IHardwareGateway hardwareGateway,
+        RfidWriteWorkflow rfidWriteWorkflow,
         IOptions<RuntimeOptions> runtimeOptions,
         IOptions<ERackSensorDisplayOptions> sensorDisplayOptions,
         RfidPollingStateCache rfidPollingCache,
@@ -37,6 +39,7 @@ public sealed class SecsMessageDispatcher
     {
         _printerGateway = printerGateway;
         _hardwareGateway = hardwareGateway;
+        _rfidWriteWorkflow = rfidWriteWorkflow;
         _runtimeOptions = runtimeOptions.Value;
         _sensorDisplayOptions = sensorDisplayOptions.Value;
         _rfidPollingCache = rfidPollingCache;
@@ -153,7 +156,7 @@ public sealed class SecsMessageDispatcher
 
         var result = UseRemoteRouting
             ? await _unitRouter.WriteTagAsync(command, cancellationToken)
-            : await _hardwareGateway.WriteTagAsync(command, cancellationToken);
+            : await _rfidWriteWorkflow.ExecuteAsync(command, cancellationToken);
         var protocolResult = ToWriteTagReply(result);
 
         _logger.LogInformation(

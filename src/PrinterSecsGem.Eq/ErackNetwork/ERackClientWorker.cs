@@ -18,6 +18,7 @@ public sealed class ERackClientWorker : BackgroundService
     private readonly ERackLocationRegistry _locations;
     private readonly RfidPollingStateCache _rfidPollingCache;
     private readonly IHardwareGateway _hardwareGateway;
+    private readonly RfidWriteWorkflow _rfidWriteWorkflow;
     private readonly IPrinterGateway _printerGateway;
     private readonly StatusUiEventBus _statusEvents;
     private readonly ILogger<ERackClientWorker> _logger;
@@ -31,6 +32,7 @@ public sealed class ERackClientWorker : BackgroundService
         ERackLocationRegistry locations,
         RfidPollingStateCache rfidPollingCache,
         IHardwareGateway hardwareGateway,
+        RfidWriteWorkflow rfidWriteWorkflow,
         IPrinterGateway printerGateway,
         StatusUiEventBus statusEvents,
         ILogger<ERackClientWorker> logger)
@@ -41,6 +43,7 @@ public sealed class ERackClientWorker : BackgroundService
         _locations = locations;
         _rfidPollingCache = rfidPollingCache;
         _hardwareGateway = hardwareGateway;
+        _rfidWriteWorkflow = rfidWriteWorkflow;
         _printerGateway = printerGateway;
         _statusEvents = statusEvents;
         _logger = logger;
@@ -249,7 +252,7 @@ public sealed class ERackClientWorker : BackgroundService
         CancellationToken cancellationToken)
     {
         var payload = envelope.ReadPayload<WriteRfidPayload>();
-        var result = await _hardwareGateway.WriteTagAsync(
+        var result = await _rfidWriteWorkflow.ExecuteAsync(
             new TagWriteCommand(payload.ShelfId, payload.LocationId, payload.Tag),
             cancellationToken);
         var resultCode = result.Success ? (byte)0 : result.Code;

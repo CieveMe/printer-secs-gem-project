@@ -7,4 +7,6 @@ public interface IHardwareGateway
     Task<OperationResult> WriteTagAsync(TagWriteCommand command, CancellationToken cancellationToken);
 
     Task<ShelfStatusResult> QueryShelfStatusAsync(ShelfStatusQuery query, CancellationToken cancellationToken);
+
+    Task<OperationResult> SetDisplayAsync(DisplayCommand command, CancellationToken cancellationToken);
 }

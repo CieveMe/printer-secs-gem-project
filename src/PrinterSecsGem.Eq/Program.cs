@@ -100,6 +100,8 @@ var builder = Host.CreateDefaultBuilder(hostArgs)
                 ? serviceProvider.GetRequiredService<ERackSerialHardwareGateway>()
                 : serviceProvider.GetRequiredService<MockHardwareGateway>();
         });
+        services.AddSingleton<DisplayCommandService>();
+        services.AddSingleton<RfidWriteWorkflow>();
         services.AddSingleton<SecsEventMessageFactory>();
         services.AddSingleton<SecsEventPublisher>();
         services.AddSingleton<ISecsGemLogger, SecsGemLogger>();

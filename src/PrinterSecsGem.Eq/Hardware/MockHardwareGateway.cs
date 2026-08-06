@@ -51,6 +51,29 @@ public sealed class MockHardwareGateway : IHardwareGateway
         return Task.FromResult(ShelfStatusResult.Ok(shelfId, new[] { location }));
     }
 
+    public Task<OperationResult> SetDisplayAsync(
+        DisplayCommand command,
+        CancellationToken cancellationToken)
+    {
+        var shelfId = NormalizeText(command.ShelfId, _options.DefaultShelfId);
+        var locationId = NormalizeText(command.LocationId, _options.DefaultLocationId);
+        if (!shelfId.Equals(_options.DefaultShelfId, StringComparison.OrdinalIgnoreCase) ||
+            !locationId.Equals(_options.DefaultLocationId, StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(OperationResult.Fail(
+                6,
+                $"location not configured: {command.LocationId}"));
+        }
+
+        _logger.LogInformation(
+            "Mock display command: shelf={ShelfId}, location={LocationId}, content={Content}, contentLength={ContentLength}",
+            shelfId,
+            locationId,
+            command.Content,
+            command.Content?.Length ?? 0);
+        return Task.FromResult(OperationResult.Ok("display updated"));
+    }
+
     private static string BuildKey(string shelfId, string locationId)
     {
         return $"{shelfId}|{locationId}";
