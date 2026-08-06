@@ -19,6 +19,7 @@ public sealed class ERackClientWorker : BackgroundService
     private readonly RfidPollingStateCache _rfidPollingCache;
     private readonly IHardwareGateway _hardwareGateway;
     private readonly RfidWriteWorkflow _rfidWriteWorkflow;
+    private readonly DisplayCommandService _displayCommands;
     private readonly IPrinterGateway _printerGateway;
     private readonly StatusUiEventBus _statusEvents;
     private readonly ILogger<ERackClientWorker> _logger;
@@ -33,6 +34,7 @@ public sealed class ERackClientWorker : BackgroundService
         RfidPollingStateCache rfidPollingCache,
         IHardwareGateway hardwareGateway,
         RfidWriteWorkflow rfidWriteWorkflow,
+        DisplayCommandService displayCommands,
         IPrinterGateway printerGateway,
         StatusUiEventBus statusEvents,
         ILogger<ERackClientWorker> logger)
@@ -44,6 +46,7 @@ public sealed class ERackClientWorker : BackgroundService
         _rfidPollingCache = rfidPollingCache;
         _hardwareGateway = hardwareGateway;
         _rfidWriteWorkflow = rfidWriteWorkflow;
+        _displayCommands = displayCommands;
         _printerGateway = printerGateway;
         _statusEvents = statusEvents;
         _logger = logger;
@@ -208,6 +211,9 @@ public sealed class ERackClientWorker : BackgroundService
             case ERackWireMessageTypes.WriteRfid:
                 await HandleWriteRfidAsync(envelope, cancellationToken);
                 return;
+            case ERackWireMessageTypes.SetDisplay:
+                await HandleSetDisplayAsync(envelope, cancellationToken);
+                return;
             case ERackWireMessageTypes.Print:
                 await HandlePrintAsync(envelope, cancellationToken);
                 return;
@@ -275,6 +281,23 @@ public sealed class ERackClientWorker : BackgroundService
                     resultCode,
                     result.Description,
                     DateTimeOffset.Now))),
+            cancellationToken);
+    }
+
+    private async Task HandleSetDisplayAsync(
+        ERackWireEnvelope envelope,
+        CancellationToken cancellationToken)
+    {
+        var payload = envelope.ReadPayload<SetDisplayPayload>();
+        var result = await _displayCommands.ExecuteAsync(
+            new DisplayCommand(payload.ShelfId, payload.LocationId, payload.Content),
+            cancellationToken);
+
+        await SendResponseAsync(
+            envelope,
+            ERackWireMessageTypes.SetDisplayResponse,
+            payload.ShelfId,
+            new BasicResultPayload(result.Success, result.Success ? (byte)0 : result.Code, result.Description),
             cancellationToken);
     }
 

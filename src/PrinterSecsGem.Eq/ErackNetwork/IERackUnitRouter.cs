@@ -8,5 +8,7 @@ public interface IERackUnitRouter
 
     Task<OperationResult> WriteTagAsync(TagWriteCommand command, CancellationToken cancellationToken);
 
+    Task<OperationResult> SetDisplayAsync(DisplayCommand command, CancellationToken cancellationToken);
+
     Task<OperationResult> PrintAsync(PrintCommand command, CancellationToken cancellationToken);
 }

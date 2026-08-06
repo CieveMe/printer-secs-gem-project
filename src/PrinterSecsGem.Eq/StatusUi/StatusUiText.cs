@@ -147,6 +147,7 @@ public sealed class StatusUiText
         text = text.Replace("Display text sent: ", "真实屏幕已显示：", StringComparison.OrdinalIgnoreCase);
         text = text.Replace("Display cleared", "真实屏幕已清屏", StringComparison.OrdinalIgnoreCase);
         text = text.Replace("Display failed: ", "屏幕显示失败：", StringComparison.OrdinalIgnoreCase);
+        text = text.Replace("Display Content Format Error", "显示内容格式错误", StringComparison.OrdinalIgnoreCase);
         text = text.Replace("Display disabled: ", "屏幕显示已禁用：", StringComparison.OrdinalIgnoreCase);
         text = text.Replace("Display skipped: ", "屏幕显示已跳过：", StringComparison.OrdinalIgnoreCase);
         text = text.Replace("Display enabled: waiting for sensor state", "屏幕显示已启用：等待传感器状态", StringComparison.OrdinalIgnoreCase);

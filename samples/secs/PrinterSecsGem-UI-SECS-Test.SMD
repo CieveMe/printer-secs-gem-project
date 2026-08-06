@@ -10,7 +10,9 @@
       <AutoReply>False</AutoReply>
       <NoLogging>False</NoLogging>
     </Header>
-    <DataItem />
+    <DataItem>
+      <L Count="0" Fixed="True" ItemName="" />
+    </DataItem>
   </S1F1>
   <S1F2>
     <Header>
@@ -24,7 +26,10 @@
       <NoLogging>False</NoLogging>
     </Header>
     <DataItem>
-      <L Count="0" Fixed="True" ItemName="" />
+      <L Count="2" Fixed="True" ItemName="">
+        <A Count="5" Fixed="True" ItemName="EquipmentModel">ERACK</A>
+        <A Count="16" Fixed="False" ItemName="SoftwareVersion">v1.0.7</A>
+      </L>
     </DataItem>
   </S1F2>
   <S1F3>
@@ -58,6 +63,42 @@
       </L>
     </DataItem>
   </S1F4>
+  <S1F13>
+    <Header>
+      <MessageName>S1F13</MessageName>
+      <Description>Establish Communications Request</Description>
+      <Stream>1</Stream>
+      <Function>13</Function>
+      <Direction>H-&gt;E</Direction>
+      <Wait>True</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="0" Fixed="True" ItemName="" />
+    </DataItem>
+  </S1F13>
+  <S1F14>
+    <Header>
+      <MessageName>S1F14</MessageName>
+      <Description>Establish Communications Acknowledge</Description>
+      <Stream>1</Stream>
+      <Function>14</Function>
+      <Direction>H&lt;-E</Direction>
+      <Wait>False</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="2" Fixed="True" ItemName="">
+        <B Count="1" Fixed="True" ItemName="COMMACK">0</B>
+        <L Count="2" Fixed="True" ItemName="CommunicationData">
+          <A Count="5" Fixed="True" ItemName="EquipmentModel">ERACK</A>
+          <A Count="16" Fixed="False" ItemName="SoftwareVersion">v1.0.7</A>
+        </L>
+      </L>
+    </DataItem>
+  </S1F14>
   <PrintCommand>
     <Header>
       <MessageName>PrintCommand</MessageName>
@@ -129,7 +170,7 @@
       <NoLogging>False</NoLogging>
     </Header>
     <DataItem>
-      <L Count="3" Fixed="True" ItemName="">
+      <L Count="4" Fixed="True" ItemName="">
         <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
         <L Count="1" Fixed="False" ItemName="Locations">
           <L Count="3" Fixed="True" ItemName="Location">
@@ -139,9 +180,49 @@
           </L>
         </L>
         <U1 Count="1" Fixed="True" ItemName="ResultCode">0</U1>
+        <A Count="64" Fixed="False" ItemName="Description">Read Success</A>
       </L>
     </DataItem>
   </ShelfStatus>
+  <DisplayCommand>
+    <Header>
+      <MessageName>DisplayCommand</MessageName>
+      <Description>S10F3 LED Display Command</Description>
+      <Stream>10</Stream>
+      <Function>3</Function>
+      <Direction>H-&gt;E</Direction>
+      <Wait>True</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="3" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
+        <A Count="6" Fixed="True" ItemName="LocationId">LOC001</A>
+        <A Count="512" Fixed="False" ItemName="Content">1234567890</A>
+      </L>
+    </DataItem>
+  </DisplayCommand>
+  <DisplayResult>
+    <Header>
+      <MessageName>DisplayResult</MessageName>
+      <Description>S10F4 LED Display Result</Description>
+      <Stream>10</Stream>
+      <Function>4</Function>
+      <Direction>H&lt;-E</Direction>
+      <Wait>False</Wait>
+      <AutoReply>False</AutoReply>
+      <NoLogging>False</NoLogging>
+    </Header>
+    <DataItem>
+      <L Count="4" Fixed="True" ItemName="">
+        <A Count="8" Fixed="True" ItemName="ShelfId">SHELF001</A>
+        <A Count="6" Fixed="True" ItemName="LocationId">LOC001</A>
+        <U1 Count="1" Fixed="True" ItemName="ResultCode">0</U1>
+        <A Count="64" Fixed="False" ItemName="Description">Set Success</A>
+      </L>
+    </DataItem>
+  </DisplayResult>
   <WriteTagCommand>
     <Header>
       <MessageName>WriteTagCommand</MessageName>

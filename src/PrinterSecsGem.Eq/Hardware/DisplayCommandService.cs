@@ -23,9 +23,10 @@ public sealed class DisplayCommandService
         DisplayCommand command,
         CancellationToken cancellationToken)
     {
-        if (!IsValid(command))
+        var validationResult = Validate(command);
+        if (!validationResult.Success)
         {
-            return OperationResult.Fail(2, FormatErrorDescription);
+            return validationResult;
         }
 
         var result = await _hardwareGateway.SetDisplayAsync(command, cancellationToken);
@@ -44,6 +45,13 @@ public sealed class DisplayCommandService
             ? $"Display Failed: code {resultCode}"
             : result.Description;
         return OperationResult.Fail(resultCode, description);
+    }
+
+    public OperationResult Validate(DisplayCommand command)
+    {
+        return IsValid(command)
+            ? OperationResult.Ok("display command valid")
+            : OperationResult.Fail(2, FormatErrorDescription);
     }
 
     private bool IsValid(DisplayCommand command)

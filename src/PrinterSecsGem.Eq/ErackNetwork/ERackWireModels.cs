@@ -47,6 +47,8 @@ public sealed record ShelfStatusResultPayload(
 
 public sealed record WriteRfidPayload(string ShelfId, string LocationId, string Tag);
 
+public sealed record SetDisplayPayload(string ShelfId, string LocationId, string Content);
+
 public sealed record PrintPayload(string ShelfId, string PrinterId, string Content, byte Copies);
 
 public sealed record RfidWriteEventPayload(

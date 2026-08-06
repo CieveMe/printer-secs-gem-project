@@ -17,6 +17,7 @@ public sealed class SecsMessageDispatcher
     private readonly IPrinterGateway _printerGateway;
     private readonly IHardwareGateway _hardwareGateway;
     private readonly RfidWriteWorkflow _rfidWriteWorkflow;
+    private readonly DisplayCommandService _displayCommands;
     private readonly RuntimeOptions _runtimeOptions;
     private readonly ERackSensorDisplayOptions _sensorDisplayOptions;
     private readonly RfidPollingStateCache _rfidPollingCache;
@@ -29,6 +30,7 @@ public sealed class SecsMessageDispatcher
         IPrinterGateway printerGateway,
         IHardwareGateway hardwareGateway,
         RfidWriteWorkflow rfidWriteWorkflow,
+        DisplayCommandService displayCommands,
         IOptions<RuntimeOptions> runtimeOptions,
         IOptions<ERackSensorDisplayOptions> sensorDisplayOptions,
         RfidPollingStateCache rfidPollingCache,
@@ -40,6 +42,7 @@ public sealed class SecsMessageDispatcher
         _printerGateway = printerGateway;
         _hardwareGateway = hardwareGateway;
         _rfidWriteWorkflow = rfidWriteWorkflow;
+        _displayCommands = displayCommands;
         _runtimeOptions = runtimeOptions.Value;
         _sensorDisplayOptions = sensorDisplayOptions.Value;
         _rfidPollingCache = rfidPollingCache;
@@ -60,8 +63,10 @@ public sealed class SecsMessageDispatcher
         {
             (1, 1) => CreateS1F2(),
             (1, 3) => CreateS1F4(),
+            (1, 13) => CreateS1F14(),
             (5, 11) => await HandleShelfStatusQueryAsync(primaryMessage, cancellationToken),
             (8, 3) => await HandlePrintAsync(primaryMessage, cancellationToken),
+            (10, 3) => await HandleDisplayAsync(primaryMessage, cancellationToken),
             (10, 11) => await HandleWriteTagAsync(primaryMessage, cancellationToken),
             _ => null
         };
@@ -196,6 +201,70 @@ public sealed class SecsMessageDispatcher
         };
     }
 
+    private async Task<SecsMessage> HandleDisplayAsync(
+        SecsMessage primaryMessage,
+        CancellationToken cancellationToken)
+    {
+        var hasValidShape = TryReadDisplayCommand(primaryMessage, out var command);
+        var contentBytes = Encoding.ASCII.GetBytes(command.Content ?? string.Empty);
+        _logger.LogInformation(
+            "Handle display command: shelf={ShelfId}, location={LocationId}, content={Content}, contentLength={ContentLength}, contentHex={ContentHex}, validShape={ValidShape}",
+            command.ShelfId,
+            command.LocationId,
+            command.Content,
+            contentBytes.Length,
+            ToHex(contentBytes),
+            hasValidShape);
+        _statusEvents.Publish(
+            StatusUiEventCategories.SecsLog,
+            $"S10F3 display command: location={command.LocationId}, content={command.Content}.");
+
+        OperationResult result;
+        if (!hasValidShape)
+        {
+            result = OperationResult.Fail(2, "Display Content Format Error");
+        }
+        else
+        {
+            var validationResult = _displayCommands.Validate(command);
+            result = !validationResult.Success
+                ? validationResult
+                : UseRemoteRouting
+                    ? await _unitRouter.SetDisplayAsync(command, cancellationToken)
+                    : await _displayCommands.ExecuteAsync(command, cancellationToken);
+        }
+
+        var protocolResult = ToDisplayReply(result);
+        var localDescription = protocolResult.Code == 2
+            ? "显示内容格式错误"
+            : protocolResult.Description;
+        _logger.LogInformation(
+            "Display command result: success={Success}, code={Code}, description={Description}",
+            result.Success,
+            protocolResult.Code,
+            protocolResult.Description);
+        _statusEvents.Publish(
+            StatusUiEventCategories.SecsLog,
+            $"S10F3 display result: code={protocolResult.Code}, description={localDescription}.");
+        _statusEvents.Publish(
+            StatusUiEventCategories.DisplayStatus,
+            protocolResult.Code == 0
+                ? string.IsNullOrEmpty(command.Content)
+                    ? "Display cleared"
+                    : $"Display text sent: {command.Content}"
+                : $"Display failed: {localDescription}");
+
+        return new SecsMessage(10, 4)
+        {
+            Name = "DisplayResult",
+            SecsItem = L(
+                A(command.ShelfId),
+                A(command.LocationId),
+                U1(protocolResult.Code),
+                A(protocolResult.Description))
+        };
+    }
+
     private async Task<SecsMessage> HandleShelfStatusQueryAsync(SecsMessage primaryMessage, CancellationToken cancellationToken)
     {
         var query = new ShelfStatusQuery(
@@ -267,7 +336,22 @@ public sealed class SecsMessageDispatcher
         return new SecsMessage(1, 2)
         {
             Name = "AreYouThereReply",
-            SecsItem = L()
+            SecsItem = L(
+                A("ERACK"),
+                A(ApplicationInfo.DisplayVersion))
+        };
+    }
+
+    private static SecsMessage CreateS1F14()
+    {
+        return new SecsMessage(1, 14)
+        {
+            Name = "EstablishCommunicationsAck",
+            SecsItem = L(
+                B((byte)0),
+                L(
+                    A("ERACK"),
+                    A(ApplicationInfo.DisplayVersion)))
         };
     }
 
@@ -320,6 +404,76 @@ public sealed class SecsMessageDispatcher
         return new ProtocolReply(
             result.Code,
             ToAsciiProtocolDescription(result.Description, $"Write Failed: code {result.Code}"));
+    }
+
+    private static ProtocolReply ToDisplayReply(OperationResult result)
+    {
+        if (result.Success)
+        {
+            return new ProtocolReply(0, "Set Success");
+        }
+
+        if (result.Code == 1)
+        {
+            return new ProtocolReply(1, "Location Not Found");
+        }
+
+        if (result.Code == 2)
+        {
+            return new ProtocolReply(2, "Display Content Format Error");
+        }
+
+        var resultCode = result.Code is 0 or 1 or 2 ? (byte)7 : result.Code;
+        return new ProtocolReply(
+            resultCode,
+            ToAsciiProtocolDescription(result.Description, $"Display Failed: code {resultCode}"));
+    }
+
+    private static bool TryReadDisplayCommand(SecsMessage message, out DisplayCommand command)
+    {
+        var root = message.SecsItem;
+        var shelfId = TryReadAscii(root, 0);
+        var locationId = TryReadAscii(root, 1);
+        var content = TryReadAscii(root, 2);
+        command = new DisplayCommand(shelfId, locationId, content);
+
+        if (root is null || root.Format != SecsFormat.List || root.Count != 3)
+        {
+            return false;
+        }
+
+        try
+        {
+            return root[0].Format == SecsFormat.ASCII &&
+                root[1].Format == SecsFormat.ASCII &&
+                root[2].Format == SecsFormat.ASCII;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string TryReadAscii(Item? root, int index)
+    {
+        try
+        {
+            var item = root?[index];
+            return item?.Format == SecsFormat.ASCII
+                ? item.GetString()
+                : string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
+    private static string ToHex(ReadOnlySpan<byte> data)
+    {
+        return data.IsEmpty
+            ? "<empty>"
+            : BitConverter.ToString(data.ToArray()).Replace("-", " ");
     }
 
     private static string ToShelfStatusReplyDescription(ShelfStatusResult result, byte resultCode)

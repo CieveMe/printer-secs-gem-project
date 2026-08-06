@@ -172,6 +172,43 @@ public sealed class ERackTcpUnitRouter : IERackUnitRouter
         }
     }
 
+    public async Task<OperationResult> SetDisplayAsync(
+        DisplayCommand command,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetSession(command.ShelfId, out var session, out var failDescription))
+        {
+            return OperationResult.Fail(6, failDescription);
+        }
+
+        try
+        {
+            var response = await session.SendRequestAsync(
+                ERackWireEnvelope.Create(
+                    ERackWireMessageTypes.SetDisplay,
+                    command.ShelfId,
+                    new SetDisplayPayload(command.ShelfId, command.LocationId, command.Content)),
+                NormalizeRequestTimeout(),
+                cancellationToken);
+
+            var payload = response.ReadPayload<BasicResultPayload>();
+            return payload.Success
+                ? OperationResult.Ok(payload.Description)
+                : OperationResult.Fail(payload.Code, payload.Description);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "ERACK display route failed: shelf={ShelfId}, location={LocationId}",
+                command.ShelfId,
+                command.LocationId);
+            return OperationResult.Fail(
+                7,
+                ex is TimeoutException ? RouteTimeoutDescription : RouteFailedDescription);
+        }
+    }
+
     public async Task<OperationResult> PrintAsync(
         PrintCommand command,
         CancellationToken cancellationToken)
@@ -214,6 +251,7 @@ public sealed class ERackTcpUnitRouter : IERackUnitRouter
         {
             case ERackWireMessageTypes.ReadShelfStatusResponse:
             case ERackWireMessageTypes.WriteRfidResponse:
+            case ERackWireMessageTypes.SetDisplayResponse:
             case ERackWireMessageTypes.PrintResponse:
             case ERackWireMessageTypes.ErrorResponse:
                 session.CompleteResponse(envelope);

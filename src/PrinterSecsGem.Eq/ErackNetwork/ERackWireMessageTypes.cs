@@ -10,6 +10,8 @@ internal static class ERackWireMessageTypes
     public const string ReadShelfStatusResponse = "ReadShelfStatusResponse";
     public const string WriteRfid = "WriteRfid";
     public const string WriteRfidResponse = "WriteRfidResponse";
+    public const string SetDisplay = "SetDisplay";
+    public const string SetDisplayResponse = "SetDisplayResponse";
     public const string Print = "Print";
     public const string PrintResponse = "PrintResponse";
     public const string ShelfStateChanged = "ShelfStateChanged";
