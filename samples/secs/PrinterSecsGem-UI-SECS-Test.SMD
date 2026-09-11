@@ -28,7 +28,7 @@
     <DataItem>
       <L Count="2" Fixed="True" ItemName="">
         <A Count="5" Fixed="True" ItemName="EquipmentModel">ERACK</A>
-        <A Count="16" Fixed="False" ItemName="SoftwareVersion">v1.0.7</A>
+        <A Count="16" Fixed="False" ItemName="SoftwareVersion">v1.0.8</A>
       </L>
     </DataItem>
   </S1F2>
@@ -94,7 +94,7 @@
         <B Count="1" Fixed="True" ItemName="COMMACK">0</B>
         <L Count="2" Fixed="True" ItemName="CommunicationData">
           <A Count="5" Fixed="True" ItemName="EquipmentModel">ERACK</A>
-          <A Count="16" Fixed="False" ItemName="SoftwareVersion">v1.0.7</A>
+          <A Count="16" Fixed="False" ItemName="SoftwareVersion">v1.0.8</A>
         </L>
       </L>
     </DataItem>

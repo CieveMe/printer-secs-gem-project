@@ -324,7 +324,7 @@ public sealed class SecsMessageDispatcher
                 L(result.Locations.Select(location =>
                     L(
                         A(location.LocationId),
-                        A(location.Tag),
+                        A(RfidMesValueFilter.Filter(location.Tag)),
                         U1(location.IsLoaded ? (byte)1 : (byte)0))).ToArray()),
                 U1(resultCode),
                 A(resultDescription))

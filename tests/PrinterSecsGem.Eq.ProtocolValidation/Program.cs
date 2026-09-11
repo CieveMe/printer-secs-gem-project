@@ -16,6 +16,7 @@ var tests = new (string Name, Func<Task> Run)[]
 {
     ("S1F2 returns ERACK and real version", TestS1F2Async),
     ("S1F14 returns COMMACK structure", TestS1F14Async),
+    ("RFID MES output keeps only ASCII alphanumeric characters", TestRfidMesValueFilter),
     ("S10F3 preserves direct display spaces", TestDisplaySuccessAsync),
     ("S10F3 explicit empty clears display", TestDisplayClearAsync),
     ("S10F3 missing location maps to code 1", TestDisplayLocationNotFoundAsync),
@@ -51,7 +52,7 @@ static async Task TestS1F2Async()
     Equal((byte)2, reply.F, "S1F2 function");
     Equal(2, reply.SecsItem!.Count, "S1F2 root count");
     Equal("ERACK", reply.SecsItem[0].GetString(), "S1F2 equipment model");
-    Equal("v1.0.7", reply.SecsItem[1].GetString(), "S1F2 software version");
+    Equal("v1.0.8", reply.SecsItem[1].GetString(), "S1F2 software version");
 }
 
 static async Task TestS1F14Async()
@@ -66,7 +67,16 @@ static async Task TestS1F14Async()
     Equal((byte)0, reply.SecsItem[0].FirstValue<byte>(), "S1F14 COMMACK value");
     Equal(2, reply.SecsItem[1].Count, "S1F14 communication data count");
     Equal("ERACK", reply.SecsItem[1][0].GetString(), "S1F14 equipment model");
-    Equal("v1.0.7", reply.SecsItem[1][1].GetString(), "S1F14 software version");
+    Equal("v1.0.8", reply.SecsItem[1][1].GetString(), "S1F14 software version");
+}
+
+static Task TestRfidMesValueFilter()
+{
+    Equal("Abc123XyZ789", RfidMesValueFilter.Filter("Abc123_测试!@#XyZ789"), "mixed RFID filter");
+    Equal("ABC123", RfidMesValueFilter.Filter("ABC 123"), "space RFID filter");
+    Equal(string.Empty, RfidMesValueFilter.Filter("测试!@#"), "empty filtered RFID");
+    Equal("TEST123", RfidMesValueFilter.Filter("TEST123   "), "trailing space RFID filter");
+    return Task.CompletedTask;
 }
 
 static async Task TestDisplaySuccessAsync()

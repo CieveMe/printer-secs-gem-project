@@ -26,7 +26,7 @@ public sealed class SecsEventMessageFactory
             L(
                 A(tagReadEvent.ShelfId),
                 A(tagReadEvent.LocationId),
-                A(tagReadEvent.Tag),
+                A(RfidMesValueFilter.Filter(tagReadEvent.Tag)),
                 U1(tagReadEvent.IsLoaded ? (byte)1 : (byte)0),
                 U4((uint)tagReadEvent.Timestamp.ToUnixTimeSeconds())));
     }
@@ -39,7 +39,7 @@ public sealed class SecsEventMessageFactory
             SecsItem = L(
                 A(shelfStateEvent.ShelfId),
                 A(shelfStateEvent.LocationId),
-                A(shelfStateEvent.Tag),
+                A(RfidMesValueFilter.Filter(shelfStateEvent.Tag)),
                 U1(shelfStateEvent.IsLoaded ? (byte)1 : (byte)0),
                 U4((uint)shelfStateEvent.Timestamp.ToUnixTimeSeconds()))
         };
@@ -59,7 +59,7 @@ public sealed class SecsEventMessageFactory
             L(
                 A(rfidWriteEvent.ShelfId),
                 A(rfidWriteEvent.LocationId),
-                A(rfidWriteEvent.Tag),
+                A(RfidMesValueFilter.Filter(rfidWriteEvent.Tag)),
                 U1(protocolResult.Code),
                 A(protocolResult.Description),
                 U4((uint)rfidWriteEvent.Timestamp.ToUnixTimeSeconds())));
