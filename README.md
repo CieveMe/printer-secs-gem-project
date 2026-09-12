@@ -48,7 +48,7 @@ v1.0.8 在组装 S5F12、S6F21 和 RFID 读写 S6F11 时，只对 RFID 字段保
 | [客户部署说明](src/PrinterSecsGem.Eq/CUSTOMER_README_CN.txt) | 启停、配置和更新步骤 |
 | [第三方依赖说明](third_party/README.md) | SDK 来源和集成说明 |
 
-`docs/`、`notes/` 和 `PROJECT_CONTEXT.md` 保留历史资料，旧“骨架/待接入”描述不代表当前实现。本机工作区上一级的 `wiki/`、`raw/` 是项目记忆，不在本 Git 仓库内；克隆仓库不会获得这些目录。
+历史实现说明以 Git 历史和 `docs/` 中的正式文档为准；当前源码状态以本 README、源码维护说明和测试结果为准。
 
 ## 构建与交付
 
