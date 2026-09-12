@@ -2,7 +2,7 @@
 
 ## 1. 系统定位
 
-`PrinterSecsGem.Eq` 是运行在 Windows EQ 侧的 .NET 8 WinForms 应用。它把 Host/MES 的 HSMS/SECS-GEM 请求转换为电子货架、RFID、传感器、点阵屏和 Zebra 打印机的操作，并把结果转换回协议应答或主动事件。
+`PrinterSecsGem.Eq`（当前版本 `v1.0.8`）是运行在 Windows EQ 侧的 .NET 8 WinForms 应用。它把 Host/MES 的 HSMS/SECS-GEM 请求转换为电子货架、RFID、传感器、点阵屏和 Zebra 打印机的操作，并把结果转换回协议应答或主动事件。
 
 程序界面和后台服务在同一个进程中运行。界面负责中文状态展示和人工操作；后台负责通信、硬件访问、事件发布和日志记录。
 
