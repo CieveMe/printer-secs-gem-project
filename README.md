@@ -41,6 +41,7 @@ v1.0.8 在组装 S5F12、S6F21 和 RFID 读写 S6F11 时，只对 RFID 字段保
 | 路径 | 用途 |
 |---|---|
 | [应用源码](src/PrinterSecsGem.Eq/) | WinForms、协议、硬件及打印服务 |
+| [系统架构](docs/architecture.md) | 数据流、模块职责、配置边界和交付流程 |
 | [协议验证](tests/PrinterSecsGem.Eq.ProtocolValidation/) | 可执行的本地回归验证 |
 | [SECS 测试定义](samples/secs/PrinterSecsGem-UI-SECS-Test.SMD) | 模拟器测试入口 |
 | [发布脚本](scripts/publish-exe-only-win-x64.ps1) | framework-dependent 单文件 EXE |
